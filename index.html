@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drowsiness Detection System</title>
+    <link rel="stylesheet" href="static/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle cx="10" cy="12" r="3" fill="currentColor" />
+              <circle cx="22" cy="12" r="3" fill="currentColor" />
+              <path
+                d="M8 20C10 22 14 23 16 23C18 23 22 22 24 20"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Drowsiness<br />Detection</span>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <a href="#" class="nav-item active" data-tab="dashboard">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" data-tab="settings">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"
+              ></path>
+            </svg>
+            <span>Settings</span>
+          </a>
+          <a href="#" class="nav-item" data-tab="history">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="9"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>History</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="status-indicator">
+            <div class="status-dot active"></div>
+            <span id="status-text">System Active</span>
+          </div>
+          <p class="version">v1.0</p>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+          <div class="dashboard-header">
+            <h1>Live Drowsiness Detection</h1>
+            <div class="header-actions">
+              <button id="camera-btn" class="btn btn-primary">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                  ></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Turn Camera Off
+              </button>
+              <button id="reset-btn" class="btn btn-secondary">
+                Reset Session
+              </button>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <!-- Video Feed Section -->
+            <section class="video-section">
+              <div class="card">
+                <div class="card-header">
+                  <h2>Live Stream</h2>
+                  <div class="connection-status">
+                    <div class="indicator"></div>
+                    <span id="video-status">Connecting...</span>
+                  </div>
+                </div>
+                <div class="video-container">
+                  <img
+                    id="video-feed"
+                    src="http://localhost:5000/video_feed"
+                    alt="Live Video Feed"
+                  />
+                  <div class="video-overlay" id="video-overlay"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Stats Section -->
+            <section class="stats-section">
+              <div class="stats-grid">
+                <!-- Drowsiness Level -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Drowsiness Level</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="drowsiness-level">0%</div>
+                    <div class="stat-bar">
+                      <div
+                        class="stat-bar-fill drowsiness"
+                        id="drowsiness-bar"
+                        style="width: 0%"
+                      ></div>
+                    </div>
+                    <p class="stat-status" id="drowsiness-status">Alert</p>
+                  </div>
+                </div>
+
+                <!-- Yawn Count -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Yawn Count</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="yawn-count">0</div>
+                    <p class="stat-label">Current Session</p>
+                  </div>
+                </div>
+
+                <!-- Blink Rate -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Blink Rate</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="blink-rate">0</div>
+                    <p class="stat-label">Blinks/Minute</p>
+                  </div>
+                </div>
+
+                <!-- Eye Closure Duration -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Closure Duration</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="closure-duration">
+                      0.0s
+                    </div>
+                    <p class="stat-label">Longest Closure</p>
+                  </div>
+                </div>
+
+                <!-- Detection Accuracy -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Accuracy</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="accuracy">0%</div>
+                    <p class="stat-label">Confidence</p>
+                  </div>
+                </div>
+
+                <!-- Session Duration -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Session Duration</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="session-duration">
+                      00:00:00
+                    </div>
+                    <p class="stat-label">Elapsed Time</p>
+                  </div>
+                </div>
+
+                <!-- Head Pose Status -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Head Position</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="head-pose-status">
+                      Centered
+                    </div>
+                    <div class="stat-bar">
+                      <div
+                        class="stat-bar-fill head-pose"
+                        id="head-pose-bar"
+                        style="width: 0%"
+                      ></div>
+                    </div>
+                    <p class="stat-status" id="head-pose-details">
+                      Y:0° P:0° R:0°
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Risk Score -->
+                <div class="stat-card">
+                  <div class="stat-header">
+                    <h3>Risk Score</h3>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value-large" id="risk-score">0.0</div>
+                    <div class="stat-bar">
+                      <div
+                        class="stat-bar-fill risk-score"
+                        id="risk-score-bar"
+                        style="width: 0%"
+                      ></div>
+                    </div>
+                    <p class="stat-status" id="risk-level">LOW</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Alerts Section -->
+          <section class="alerts-section">
+            <div class="card">
+              <div class="card-header">
+                <h2>Alerts & Notifications</h2>
+              </div>
+              <div class="alerts-container" id="alerts-container">
+                <div class="alert-item alert-info">
+                  <div class="alert-icon">ℹ️</div>
+                  <div class="alert-content">
+                    <p class="alert-title">System Initialized</p>
+                    <p class="alert-message">
+                      Drowsiness detection system is running
+                    </p>
+                  </div>
+                  <span class="alert-time">now</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+          <div class="settings-header">
+            <h1>Settings & Configuration</h1>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Detection Thresholds -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Detection Thresholds</h2>
+              </div>
+              <div class="settings-content">
+                <!-- Drowsiness Threshold -->
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <label for="drowsiness-threshold"
+                      >Drowsiness Threshold</label
+                    >
+                    <span class="setting-value" id="drowsiness-threshold-value"
+                      >0.5</span
+                    >
+                  </div>
+                  <div class="slider-container">
+                    <input
+                      type="range"
+                      id="drowsiness-threshold"
+                      class="slider"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value="0.5"
+                    />
+                    <div class="slider-labels">
+                      <span>Low</span>
+                      <span>High</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Yawn Threshold -->
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <label for="yawn-threshold">Yawn Detection Threshold</label>
+                    <span class="setting-value" id="yawn-threshold-value"
+                      >0.5</span
+                    >
+                  </div>
+                  <div class="slider-container">
+                    <input
+                      type="range"
+                      id="yawn-threshold"
+                      class="slider"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value="0.5"
+                    />
+                    <div class="slider-labels">
+                      <span>Low</span>
+                      <span>High</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Blink Duration Threshold -->
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <label for="blink-threshold"
+                      >Blink Duration Threshold (ms)</label
+                    >
+                    <span class="setting-value" id="blink-threshold-value"
+                      >100</span
+                    >
+                  </div>
+                  <div class="slider-container">
+                    <input
+                      type="range"
+                      id="blink-threshold"
+                      class="slider"
+                      min="50"
+                      max="300"
+                      step="10"
+                      value="100"
+                    />
+                    <div class="slider-labels">
+                      <span>50ms</span>
+                      <span>300ms</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- System Settings -->
+            <div class="card">
+              <div class="card-header">
+                <h2>System Settings</h2>
+              </div>
+              <div class="settings-content">
+                <!-- Enable Alerts -->
+                <div class="setting-item toggle-setting">
+                  <div class="setting-label">
+                    <label>Enable Alerts</label>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="enable-alerts" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+
+                <!-- Sound Notification -->
+                <div class="setting-item toggle-setting">
+                  <div class="setting-label">
+                    <label>Sound Notifications</label>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="sound-notifications" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+
+                <!-- Video Quality -->
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <label for="video-quality">Video Quality</label>
+                  </div>
+                  <select id="video-quality" class="select-input">
+                    <option value="high">High (720p)</option>
+                    <option value="medium" selected>Medium (480p)</option>
+                    <option value="low">Low (360p)</option>
+                  </select>
+                </div>
+
+                <!-- Stats Update Interval -->
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <label for="update-interval"
+                      >Stats Update Interval (ms)</label
+                    >
+                    <span class="setting-value" id="update-interval-value"
+                      >500</span
+                    >
+                  </div>
+                  <div class="slider-container">
+                    <input
+                      type="range"
+                      id="update-interval"
+                      class="slider"
+                      min="200"
+                      max="2000"
+                      step="100"
+                      value="500"
+                    />
+                    <div class="slider-labels">
+                      <span>200ms</span>
+                      <span>2000ms</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calibration -->
+            <div class="card">
+              <div class="card-header">
+                <h2>Calibration</h2>
+              </div>
+              <div class="settings-content">
+                <p class="setting-description">
+                  Calibrate the system for more accurate detection
+                </p>
+                <button class="btn btn-primary">Start Calibration</button>
+                <button class="btn btn-secondary" style="margin-top: 10px">
+                  Load Default Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+          <div class="history-header">
+            <h1>Session History</h1>
+            <div class="history-filters">
+              <input type="date" id="history-date-filter" class="input-field" />
+              <select id="history-filter" class="select-input">
+                <option value="all">All Sessions</option>
+                <option value="high">High Drowsiness</option>
+                <option value="medium">Medium Drowsiness</option>
+                <option value="low">Low Drowsiness</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Recent Sessions</h2>
+            </div>
+            <div class="history-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Duration</th>
+                    <th>Avg Drowsiness</th>
+                    <th>Yawns</th>
+                    <th>Peak Level</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody">
+                  <tr class="empty-state">
+                    <td colspan="6">No sessions recorded yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Session Statistics -->
+          <div class="stats-grid" style="margin-top: 30px">
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Total Sessions</h3>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value-large" id="total-sessions">0</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Total Duration</h3>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value-large" id="total-duration">0h</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Average Drowsiness</h3>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value-large" id="avg-drowsiness">0%</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <h3>Total Yawns</h3>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value-large" id="total-yawns">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="static/script.js"></script>
+  </body>
+</html>
