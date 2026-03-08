@@ -22,5 +22,4 @@ This is the frontend interface for the Real-Time Drowsiness Detection System.
 
 ## Backend Dependency
 
-This frontend requires the backend API to be running. Update the `baseURL` in `static/script.js` if the backend is on a different URL.</content>
-<parameter name="filePath">c:\Users\Hp\OneDrive\Desktop\Real-Time-Drowsiness-Detection-System\frontend\README.md
+This frontend requires the backend API to be running. Update the `baseURL` in `static/script.js` if the backend is on a different URL.
