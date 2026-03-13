@@ -1,0 +1,11 @@
+opencv-python
+mediapipe
+numpy
+flask
+flask-socketio
+librosa
+scikit-learn
+scipy
+imutils
+Pillow
+eventlet

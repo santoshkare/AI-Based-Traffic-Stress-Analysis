@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeDrive.ai — Risk Score Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:      #0d1117;
+    --panel:   #161b22;
+    --border:  #30363d;
+    --text:    #c9d1d9;
+    --accent:  #e74c3c;
+    --green:   #27ae60;
+    --yellow:  #f39c12;
+    --blue:    #3498db;
+  }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; }
+
+  /* ── Header ── */
+  header {
+    background:var(--panel);
+    border-bottom:3px solid var(--accent);
+    padding:12px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo { font-size:1.5rem; font-weight:700; color:#fff; }
+  .logo span { color:var(--accent); }
+  .header-right { display:flex; gap:12px; align-items:center; }
+  .pill {
+    padding:4px 14px; border-radius:20px; font-size:0.8rem; font-weight:600;
+    background:#21262d; border:1px solid var(--border);
+  }
+
+  /* ── Layout ── */
+  .main-grid {
+    display:grid;
+    grid-template-columns: 220px 1fr 280px;
+    grid-template-rows: auto;
+    gap:12px; padding:12px; height:calc(100vh - 58px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:8px;
+  }
+  .sidebar-title { font-size:0.7rem; text-transform:uppercase;
+    letter-spacing:1px; color:#8b949e; margin-bottom:4px; }
+  .nav-item {
+    padding:8px 12px; border-radius:6px; cursor:pointer;
+    font-size:0.85rem; transition:background 0.2s;
+  }
+  .nav-item:hover { background:#21262d; }
+  .nav-section { margin-top:12px; }
+
+  /* ── Center: Camera + Logs ── */
+  .center { display:flex; flex-direction:column; gap:12px; }
+  .camera-panel {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; overflow:hidden; position:relative;
+  }
+  .camera-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-bottom:1px solid var(--border);
+  }
+  .camera-header h3 { font-size:0.9rem; }
+  .live-badge {
+    background:var(--accent); color:#fff; font-size:0.7rem;
+    padding:2px 8px; border-radius:3px; font-weight:700; animation:pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  #camera-feed {
+    width:100%; display:block; background:#000; min-height:200px;
+    object-fit:cover;
+  }
+  .no-feed {
+    display:flex; align-items:center; justify-content:center;
+    height:240px; color:#8b949e; font-size:0.9rem; flex-direction:column; gap:8px;
+  }
+
+  /* Alert Banner */
+  #alert-banner {
+    display:none; position:absolute; top:50px; left:50%; transform:translateX(-50%);
+    background:rgba(231,76,60,0.9); color:#fff; padding:10px 24px;
+    border-radius:8px; font-size:1rem; font-weight:700; z-index:10;
+  }
+
+  /* Camera controls */
+  .cam-controls { padding:10px 14px; display:flex; gap:8px; }
+  .btn {
+    padding:7px 18px; border-radius:6px; border:none; cursor:pointer;
+    font-size:0.85rem; font-weight:600; transition:opacity 0.2s;
+  }
+  .btn:hover { opacity:0.85; }
+  .btn-green  { background:var(--green);  color:#fff; }
+  .btn-red    { background:var(--accent); color:#fff; }
+  .btn-yellow { background:var(--yellow); color:#fff; }
+
+  /* Logs */
+  .logs-panel {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; flex:1; overflow:hidden; display:flex; flex-direction:column;
+  }
+  .logs-header { padding:10px 14px; border-bottom:1px solid var(--border); font-size:0.9rem; }
+  .logs-body { flex:1; overflow-y:auto; padding:8px 14px; font-size:0.8rem; }
+  .log-entry { padding:5px 0; border-bottom:1px solid #21262d; color:#8b949e; }
+  .log-entry.warn { color:var(--yellow); }
+  .log-entry.alert { color:var(--accent); }
+
+  /* ── Right panel ── */
+  .right-panel { display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+
+  .card {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:14px;
+  }
+  .card h4 { font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;
+    color:#8b949e; margin-bottom:10px; }
+
+  /* Risk gauge */
+  #risk-gauge-wrap { text-align:center; }
+  #risk-number { font-size:3rem; font-weight:900; }
+  #risk-label  { font-size:1rem; font-weight:600; margin-top:4px; }
+
+  .gauge-bar-bg {
+    height:10px; border-radius:5px; margin-top:10px;
+    background:linear-gradient(to right, #27ae60, #f39c12, #e74c3c);
+  }
+  #gauge-marker {
+    width:12px; height:12px; background:#fff; border:2px solid #000;
+    border-radius:50%; position:relative; top:-11px;
+    transition: left 0.5s;
+  }
+
+  /* Sub-scores */
+  .sub-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .sub-label { font-size:0.85rem; }
+  .sub-bar-bg { width:120px; height:8px; background:#21262d; border-radius:4px; }
+  .sub-bar    { height:100%; border-radius:4px; transition:width 0.4s; }
+
+  /* Status indicators */
+  .status-row {
+    display:flex; align-items:center; gap:8px;
+    padding:6px 0; border-bottom:1px solid #21262d; font-size:0.85rem;
+  }
+  .dot {
+    width:10px; height:10px; border-radius:50%;
+    background:#8b949e; flex-shrink:0;
+  }
+  .dot.ok     { background:var(--green);  }
+  .dot.warn   { background:var(--yellow); }
+  .dot.danger { background:var(--accent); }
+
+  /* Recent alerts */
+  .alert-item {
+    font-size:0.8rem; padding:6px 8px; border-radius:4px;
+    background:#21262d; margin-bottom:5px;
+    display:flex; justify-content:space-between;
+  }
+  .alert-time { color:#8b949e; font-size:0.72rem; }
+
+  /* EAR/MAR values */
+  .metrics-row { display:flex; gap:10px; margin-top:4px; }
+  .metric-box {
+    flex:1; background:#21262d; border-radius:6px; padding:8px;
+    text-align:center;
+  }
+  .metric-box .val { font-size:1.3rem; font-weight:700; }
+  .metric-box .lbl { font-size:0.7rem; color:#8b949e; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">Safe<span>Drive</span>.ai</div>
+  <div class="header-right">
+    <span class="pill" id="conn-status">⚫ Disconnected</span>
+    <span class="pill" id="engine-pill" onclick="toggleEngine()" style="cursor:pointer">🔑 Engine: ON</span>
+    <span class="pill">RISK SCORE ENGINE DASHBOARD</span>
+  </div>
+</header>
+
+<!-- ── Main grid ── -->
+<div class="main-grid">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav-item">📊 Dashboard</div>
+    <div class="nav-item">📋 Overview</div>
+    <div class="nav-section">
+      <div class="sidebar-title">Risk Score Engine</div>
+      <div class="nav-item">📤 Module Output</div>
+      <div class="nav-item">🧮 Risk Calculation</div>
+      <div class="nav-item">🔗 Combined Risk</div>
+      <div class="nav-item">🚦 Risk Levels</div>
+    </div>
+    <div class="nav-section">
+      <div class="sidebar-title">Modules</div>
+      <div class="nav-item">👁 Face Analysis</div>
+      <div class="nav-item">😤 Emotion Detection</div>
+      <div class="nav-item">🎤 Stress Analysis</div>
+      <div class="nav-item">🌫 Visibility Detection</div>
+      <div class="nav-item">👶 Child Presence</div>
+      <div class="nav-item">⚡ Real-time Risk Score</div>
+      <div class="nav-item">🔔 Dashboard Alerts</div>
+    </div>
+  </div>
+
+  <!-- Center -->
+  <div class="center">
+    <div class="camera-panel">
+      <div class="camera-header">
+        <h3>Live Camera Feed</h3>
+        <span class="live-badge" id="live-badge">LIVE FEED</span>
+      </div>
+      <div id="feed-wrap">
+        <div class="no-feed" id="no-feed">
+          <span style="font-size:2rem">📷</span>
+          <span>Camera not started</span>
+          <span style="font-size:0.8rem">Click "Start Camera" below</span>
+        </div>
+        <img id="camera-feed" style="display:none" alt="Live feed">
+      </div>
+      <div id="alert-banner">⚠ Drowsiness Detected! Take a Break.</div>
+      <div class="cam-controls">
+        <button class="btn btn-green" onclick="startCamera()">▶ Start Camera</button>
+        <button class="btn btn-red"   onclick="stopCamera()">⏹ Stop Camera</button>
+      </div>
+    </div>
+
+    <!-- Drive logs -->
+    <div class="logs-panel">
+      <div class="logs-header">📋 Driving Status Logs</div>
+      <div class="logs-body" id="logs-body">
+        <div class="log-entry">— Waiting for camera feed —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+
+    <!-- Risk score -->
+    <div class="card">
+      <h4>Current Risk Score</h4>
+      <div id="risk-gauge-wrap">
+        <div id="risk-number" style="color:#27ae60">0.0</div>
+        <div id="risk-label" style="color:#27ae60">Low Risk</div>
+        <div class="gauge-bar-bg">
+          <div id="gauge-marker" style="left:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-scores -->
+    <div class="card">
+      <h4>Module Sub-Scores</h4>
+      <div class="sub-row">
+        <span class="sub-label">👁 Drowsiness</span>
+        <div class="sub-bar-bg"><div class="sub-bar" id="bar-drowsy" style="width:0%;background:#e74c3c"></div></div>
+        <span id="val-drowsy" style="font-size:0.8rem">0</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">🎤 Stress</span>
+        <div class="sub-bar-bg"><div class="sub-bar" id="bar-stress" style="width:0%;background:#9b59b6"></div></div>
+        <span id="val-stress" style="font-size:0.8rem">0</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">🌫 Environment</span>
+        <div class="sub-bar-bg"><div class="sub-bar" id="bar-env" style="width:0%;background:#3498db"></div></div>
+        <span id="val-env" style="font-size:0.8rem">0</span>
+      </div>
+      <div class="sub-row">
+        <span class="sub-label">👶 Child</span>
+        <div class="sub-bar-bg"><div class="sub-bar" id="bar-child" style="width:0%;background:#f39c12"></div></div>
+        <span id="val-child" style="font-size:0.8rem">0</span>
+      </div>
+    </div>
+
+    <!-- Status indicators -->
+    <div class="card">
+      <h4>Detection Status</h4>
+      <div class="status-row">
+        <div class="dot" id="dot-drowsy"></div>
+        <span>Drowsiness</span>
+        <span id="txt-drowsy" style="margin-left:auto;font-size:0.8rem">OK</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dot-yawn"></div>
+        <span>Yawning</span>
+        <span id="txt-yawn" style="margin-left:auto;font-size:0.8rem">OK</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dot-vis"></div>
+        <span>Visibility</span>
+        <span id="txt-vis" style="margin-left:auto;font-size:0.8rem">Clear</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dot-child"></div>
+        <span>Child Safety</span>
+        <span id="txt-child" style="margin-left:auto;font-size:0.8rem">OK</span>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="val" id="metric-ear">—</div>
+          <div class="lbl">EAR</div>
+        </div>
+        <div class="metric-box">
+          <div class="val" id="metric-mar">—</div>
+          <div class="lbl">MAR</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent alerts -->
+    <div class="card">
+      <h4>Recent Alerts</h4>
+      <div id="recent-alerts">
+        <div style="color:#8b949e;font-size:0.8rem">No alerts yet</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const socket = io();
+let engineOn = true;
+
+socket.on("connect", () => {
+  document.getElementById("conn-status").textContent = "🟢 Connected";
+});
+socket.on("disconnect", () => {
+  document.getElementById("conn-status").textContent = "⚫ Disconnected";
+});
+
+socket.on("frame_update", (data) => {
+  // Frame
+  const img = document.getElementById("camera-feed");
+  img.src = "data:image/jpeg;base64," + data.image;
+  img.style.display = "block";
+  document.getElementById("no-feed").style.display = "none";
+
+  const s = data.state;
+
+  // Risk score
+  const score = s.risk_score || 0;
+  document.getElementById("risk-number").textContent = score.toFixed(1);
+  document.getElementById("risk-number").style.color = s.risk_color;
+  document.getElementById("risk-label").textContent  = s.risk_level;
+  document.getElementById("risk-label").style.color  = s.risk_color;
+  document.getElementById("gauge-marker").style.left = (score/10*88) + "%";
+
+  // Sub-scores
+  const ss = s.sub_scores || {};
+  setBar("bar-drowsy","val-drowsy", ss.drowsiness||0);
+  setBar("bar-stress","val-stress",  ss.stress||0);
+  setBar("bar-env","val-env",        ss.environment||0);
+  setBar("bar-child","val-child",    ss.child||0);
+
+  // Status dots
+  setDot("dot-drowsy","txt-drowsy", s.drowsy,  "ALERT","OK");
+  setDot("dot-yawn","txt-yawn",     s.yawning, "ALERT","OK");
+  const visWarn = s.visibility !== "Clear";
+  document.getElementById("dot-vis").className = "dot " + (visWarn ? "warn" : "ok");
+  document.getElementById("txt-vis").textContent = s.visibility;
+  setDot("dot-child","txt-child",   s.child_alert, "ALERT","OK");
+
+  // EAR / MAR
+  document.getElementById("metric-ear").textContent = s.ear || "—";
+  document.getElementById("metric-mar").textContent = s.mar || "—";
+
+  // Alert banner
+  const banner = document.getElementById("alert-banner");
+  if (s.drowsy || s.child_alert) {
+    banner.style.display = "block";
+    banner.textContent = s.drowsy ? "⚠ Drowsiness Detected! Take a Break." : "⚠ Child in Vehicle!";
+  } else {
+    banner.style.display = "none";
+  }
+
+  // Logs
+  if (data.logs && data.logs.length) {
+    const lb = document.getElementById("logs-body");
+    lb.innerHTML = data.logs.map(l =>
+      `<div class="log-entry ${l.includes('Detected')||l.includes('Child') ? 'alert':''}">${l}</div>`
+    ).join("");
+  }
+
+  // Recent alerts
+  if (data.alerts && data.alerts.length) {
+    document.getElementById("recent-alerts").innerHTML = data.alerts.map(a =>
+      `<div class="alert-item"><span>${a.message}</span><span class="alert-time">${a.time} · ${a.score}</span></div>`
+    ).join("");
+  }
+});
+
+socket.on("camera_error", (d) => alert("Camera error: " + d.msg));
+
+function setBar(barId, valId, score) {
+  document.getElementById(barId).style.width = (score/10*100) + "%";
+  document.getElementById(valId).textContent = score;
+}
+
+function setDot(dotId, txtId, flag, onLabel, offLabel) {
+  const dot = document.getElementById(dotId);
+  dot.className = "dot " + (flag ? "danger" : "ok");
+  document.getElementById(txtId).textContent = flag ? onLabel : offLabel;
+}
+
+function startCamera() { socket.emit("start_camera"); }
+function stopCamera()  { socket.emit("stop_camera");  }
+
+function toggleEngine() {
+  engineOn = !engineOn;
+  fetch("/api/engine", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({on: engineOn})
+  });
+  document.getElementById("engine-pill").textContent = "🔑 Engine: " + (engineOn ? "ON" : "OFF");
+}
+</script>
+</body>
+</html>
