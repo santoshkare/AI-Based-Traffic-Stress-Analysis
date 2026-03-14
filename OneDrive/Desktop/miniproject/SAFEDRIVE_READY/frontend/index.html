@@ -1,0 +1,2882 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SafeDrive.ai — Driver Safety Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #080c14;
+        --panel: #0d1220;
+        --panel2: #111827;
+        --border: #1c2a40;
+        --text: #c0d0e8;
+        --muted: #4a6080;
+        --red: #e74c3c;
+        --yellow: #f0a500;
+        --green: #22c55e;
+        --blue: #3b82f6;
+        --purple: #a855f7;
+        --cyan: #06b6d4;
+      }
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 14px;
+        overflow: hidden;
+      }
+      body {
+        overflow: hidden;
+      }
+
+      /* ─── HEADER ─── */
+      header {
+        height: 46px;
+        background: var(--panel);
+        border-bottom: 2px solid var(--red);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .logo {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: 2px;
+      }
+      .logo span {
+        color: var(--red);
+      }
+      .hpills {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .pill {
+        padding: 3px 11px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        border: 1px solid var(--border);
+        background: var(--panel2);
+        cursor: pointer;
+        color: var(--text);
+        transition:
+          border-color 0.2s,
+          color 0.2s;
+      }
+      .pill:hover {
+        border-color: var(--blue);
+        color: #fff;
+      }
+      .pill.active-green {
+        border-color: var(--green) !important;
+        color: var(--green) !important;
+      }
+      .pill.active-red {
+        border-color: var(--red) !important;
+        color: var(--red) !important;
+      }
+      .live-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--red);
+        animation: blink 1.2s infinite;
+        margin-right: 5px;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      /* ─── LAYOUT ─── */
+      .wrap {
+        display: grid;
+        grid-template-columns: 190px 1fr 280px;
+        grid-template-rows: 1fr;
+        gap: 8px;
+        padding: 8px;
+        height: calc(100vh - 46px);
+        overflow: hidden;
+      }
+
+      /* ─── SIDEBAR ─── */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow-y: auto;
+        max-height: 100%;
+      }
+      .stitle {
+        font-size: 0.63rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--muted);
+        margin: 10px 0 3px 6px;
+      }
+      .sitem {
+        padding: 6px 10px 6px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.83rem;
+        border-left: 2px solid transparent;
+        transition: all 0.15s;
+      }
+      .sitem:hover,
+      .sitem.on {
+        background: #151f30;
+        border-left-color: var(--red);
+        color: #fff;
+      }
+      .sitem-icon {
+        margin-right: 6px;
+        font-size: 13px;
+      }
+
+      /* ─── CENTER ─── */
+      .center {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+        max-height: 100%;
+        overflow: hidden;
+      }
+      .cam-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .cam-head {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cam-head h3 {
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      .cam-body {
+        position: relative;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      video#vid {
+        width: 100%;
+        display: block;
+        transform: scaleX(-1);
+      }
+      canvas#overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform: scaleX(-1);
+      }
+      canvas#emo-canvas {
+        display: none;
+      }
+
+      /* alert banner */
+      .alert-banner {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(231, 76, 60, 0.92);
+        color: #fff;
+        padding: 10px 22px;
+        border-radius: 7px;
+        font-size: 1rem;
+        font-weight: 700;
+        text-align: center;
+        pointer-events: none;
+        animation: blink 0.8s infinite;
+        z-index: 10;
+        white-space: nowrap;
+      }
+      .cam-footer {
+        padding: 8px 12px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 6px 16px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+      }
+      .btn:hover {
+        opacity: 0.85;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .bg {
+        background: var(--green);
+        color: #000;
+      }
+      .br {
+        background: var(--red);
+        color: #fff;
+      }
+      .by {
+        background: var(--yellow);
+        color: #000;
+      }
+      .bb {
+        background: var(--blue);
+        color: #fff;
+      }
+      #status-msg {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-left: 4px;
+      }
+
+      /* logs */
+      .log-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .log-head {
+        padding: 7px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+      }
+      .log-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 12px;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 0.72rem;
+      }
+      .log-entry {
+        padding: 3px 0;
+        border-bottom: 1px solid #0a0f1a;
+        color: var(--muted);
+      }
+      .log-entry.w {
+        color: var(--yellow);
+      }
+      .log-entry.d {
+        color: var(--red);
+      }
+      .log-entry.g {
+        color: var(--green);
+      }
+
+      /* ─── RIGHT PANEL ─── */
+      .right {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow-y: auto;
+        height: 100%;
+        min-height: 0;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .card-h {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      /* risk gauge */
+      .risk-center {
+        text-align: center;
+        padding: 12px 14px 6px;
+      }
+      #rnum {
+        font-size: 3rem;
+        font-weight: 700;
+        font-family: "Share Tech Mono", monospace;
+        line-height: 1;
+        transition: color 0.4s;
+      }
+      #rlbl {
+        font-size: 0.92rem;
+        font-weight: 600;
+        margin-top: 3px;
+        transition: color 0.4s;
+      }
+      .gauge-track {
+        margin: 10px 14px 12px;
+        height: 8px;
+        border-radius: 4px;
+        background: linear-gradient(
+          to right,
+          var(--green) 0%,
+          var(--green) 30%,
+          var(--yellow) 30%,
+          var(--yellow) 60%,
+          var(--red) 60%
+        );
+        position: relative;
+      }
+      #gmk {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #000;
+        position: absolute;
+        top: -3px;
+        transform: translateX(-50%);
+        transition: left 0.5s;
+      }
+
+      /* sub bars */
+      .subs {
+        padding: 10px 14px;
+      }
+      .sub {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .slbl {
+        min-width: 90px;
+        max-width: 90px;
+        font-size: 0.73rem;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sbg {
+        flex: 1;
+        height: 6px;
+        background: #111827;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .sfill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.45s;
+        width: 0%;
+      }
+      .sval {
+        width: 22px;
+        text-align: right;
+        font-size: 0.75rem;
+        font-weight: 600;
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      /* status dots */
+      .dot-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        border-bottom: 1px solid #0a0f1a;
+        font-size: 0.82rem;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition:
+          background 0.3s,
+          box-shadow 0.3s;
+      }
+      .dok {
+        background: var(--green);
+      }
+      .dw {
+        background: var(--yellow);
+      }
+      .dd {
+        background: var(--red);
+        box-shadow: 0 0 6px var(--red);
+      }
+      .doff {
+        background: #1c2a40;
+      }
+      .dval {
+        margin-left: auto;
+        font-size: 0.72rem;
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      /* metrics grid */
+      .mgrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 10px 12px;
+      }
+      .mbox {
+        background: #0a0e18;
+        border-radius: 6px;
+        padding: 8px;
+        text-align: center;
+      }
+      .mval {
+        font-size: 1.2rem;
+        font-weight: 700;
+        font-family: "Share Tech Mono", monospace;
+        transition: color 0.3s;
+      }
+      .mlbl {
+        font-size: 0.63rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 2px;
+      }
+
+      /* emotion bars */
+      .emo-grid {
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .emo-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .emo-lbl {
+        width: 68px;
+        font-size: 0.73rem;
+        color: var(--muted);
+      }
+      .emo-bg {
+        flex: 1;
+        height: 5px;
+        background: #111827;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .emo-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s;
+      }
+      .emo-pct {
+        width: 30px;
+        text-align: right;
+        font-size: 0.7rem;
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      /* alerts */
+      .al-item {
+        margin: 4px 10px;
+        padding: 5px 8px;
+        background: #0a0e18;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.73rem;
+      }
+      .badge {
+        padding: 2px 7px;
+        border-radius: 3px;
+        font-size: 0.66rem;
+        font-weight: 700;
+      }
+      .bdr {
+        background: rgba(231, 76, 60, 0.18);
+        color: var(--red);
+        border: 1px solid rgba(231, 76, 60, 0.3);
+      }
+      .bdw {
+        background: rgba(240, 165, 0, 0.18);
+        color: var(--yellow);
+        border: 1px solid rgba(240, 165, 0, 0.3);
+      }
+      .at {
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      /* mic wave */
+      .mic-wrap {
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .wave-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 30px;
+      }
+      .wb {
+        width: 4px;
+        border-radius: 2px;
+        background: var(--purple);
+        transition: height 0.1s;
+        min-height: 3px;
+      }
+      #mic-label {
+        font-size: 0.8rem;
+        margin-left: 8px;
+      }
+      #mic-level-text {
+        font-size: 0.72rem;
+        color: var(--muted);
+        margin-left: auto;
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      /* loading overlay removed */
+
+      /* scrollbars */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0a0e18;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1c2a40;
+        border-radius: 2px;
+      }
+
+      /* ═══════════════════════════════════════ LOGIN PAGE ═══ */
+      #auth-page {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: #030509;
+        display: flex;
+        align-items: stretch;
+        overflow: hidden;
+      }
+      /* Left cinematic panel */
+      .auth-left {
+        flex: 1.1;
+        position: relative;
+        overflow: hidden;
+        background: #030509;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      /* Animated radar grid */
+      .radar-canvas {
+        position: absolute;
+        inset: 0;
+        opacity: 0.55;
+      }
+      /* Animated scan ring */
+      .scan-ring {
+        position: absolute;
+        width: 500px;
+        height: 500px;
+        border-radius: 50%;
+        border: 1px solid rgba(231, 76, 60, 0.15);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: expand 4s ease-out infinite;
+      }
+      .scan-ring:nth-child(2) {
+        animation-delay: 1.3s;
+      }
+      .scan-ring:nth-child(3) {
+        animation-delay: 2.6s;
+      }
+      @keyframes expand {
+        0% {
+          transform: translate(-50%, -50%) scale(0.1);
+          opacity: 0.9;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1.4);
+          opacity: 0;
+        }
+      }
+      .auth-brand {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+      }
+      .auth-logo {
+        font-family: "Orbitron", monospace;
+        font-size: 3.2rem;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: 6px;
+        line-height: 1;
+      }
+      .auth-logo span {
+        color: #e74c3c;
+        text-shadow: 0 0 20px rgba(231, 76, 60, 0.6);
+      }
+      .auth-tagline {
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.95rem;
+        color: #4a6888;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-top: 10px;
+      }
+      .auth-stats {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        gap: 40px;
+        margin-top: 60px;
+      }
+      .astat {
+        text-align: center;
+      }
+      .astat-num {
+        font-family: "Orbitron", monospace;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #e74c3c;
+      }
+      .astat-lbl {
+        font-size: 0.7rem;
+        color: #3a5070;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-top: 4px;
+      }
+      /* Feature list */
+      .auth-features {
+        position: relative;
+        z-index: 2;
+        margin-top: 50px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .af {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.85rem;
+        color: #3a5878;
+      }
+      .af-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #e74c3c;
+        flex-shrink: 0;
+        box-shadow: 0 0 8px #e74c3c;
+      }
+      .af:hover .af-dot {
+        background: #22c55e;
+        box-shadow: 0 0 8px #22c55e;
+        transition: all 0.3s;
+      }
+      .af:hover {
+        color: #8ab8d8;
+        transition: color 0.3s;
+        cursor: default;
+      }
+
+      /* Right form panel */
+      .auth-right {
+        width: 480px;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #0a0f1c 0%, #0d1525 100%);
+        border-left: 1px solid #1a2840;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 50px 48px;
+        position: relative;
+        overflow: hidden;
+      }
+      .auth-right::before {
+        content: "";
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(231, 76, 60, 0.06) 0%,
+          transparent 70%
+        );
+      }
+      .auth-right::after {
+        content: "";
+        position: absolute;
+        bottom: -80px;
+        left: -80px;
+        width: 250px;
+        height: 250px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(59, 130, 246, 0.05) 0%,
+          transparent 70%
+        );
+      }
+      /* Tab switcher */
+      .auth-tabs {
+        display: flex;
+        margin-bottom: 36px;
+        border-bottom: 1px solid #1a2840;
+        position: relative;
+        z-index: 1;
+      }
+      .auth-tab {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        cursor: pointer;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: #3a5070;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition:
+          color 0.25s,
+          border-color 0.25s;
+      }
+      .auth-tab.active {
+        color: #e74c3c;
+        border-bottom-color: #e74c3c;
+      }
+      .auth-tab:hover:not(.active) {
+        color: #7a9ab8;
+      }
+      /* Forms */
+      .auth-form {
+        display: none;
+        position: relative;
+        z-index: 1;
+      }
+      .auth-form.visible {
+        display: block;
+        animation: fadeUp 0.4s ease;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .form-title {
+        font-family: "Orbitron", monospace;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 6px;
+        letter-spacing: 1px;
+      }
+      .form-sub {
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.82rem;
+        color: #3a5070;
+        margin-bottom: 30px;
+        line-height: 1.5;
+      }
+      .field {
+        margin-bottom: 18px;
+        position: relative;
+      }
+      .field label {
+        display: block;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #4a6888;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-bottom: 7px;
+      }
+      .field input {
+        width: 100%;
+        padding: 12px 14px 12px 42px;
+        background: #080e1c;
+        border: 1px solid #1a2840;
+        border-radius: 6px;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.92rem;
+        color: #c0d0e8;
+        outline: none;
+        transition:
+          border-color 0.25s,
+          box-shadow 0.25s;
+      }
+      .field input::placeholder {
+        color: #2a3c54;
+      }
+      .field input:focus {
+        border-color: #e74c3c;
+        box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
+      }
+      .field-icon {
+        position: absolute;
+        left: 13px;
+        bottom: 12px;
+        font-size: 16px;
+        pointer-events: none;
+      }
+      .field input:focus + .field-icon ~ .field-glow,
+      .field input:focus ~ .field-glow {
+        opacity: 1;
+      }
+      .field-glow {
+        position: absolute;
+        inset: -1px;
+        border-radius: 6px;
+        border: 1px solid #e74c3c;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+      }
+      /* Password toggle */
+      .pwd-toggle {
+        position: absolute;
+        right: 13px;
+        bottom: 12px;
+        cursor: pointer;
+        font-size: 15px;
+        color: #3a5070;
+        transition: color 0.2s;
+      }
+      .pwd-toggle:hover {
+        color: #c0d0e8;
+      }
+      /* Remember row */
+      .flex-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+      .check-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.82rem;
+        color: #3a5070;
+      }
+      .check-label input[type="checkbox"] {
+        accent-color: #e74c3c;
+        width: 14px;
+        height: 14px;
+      }
+      .forgot {
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.8rem;
+        color: #e74c3c;
+        cursor: pointer;
+        text-decoration: none;
+        opacity: 0.8;
+      }
+      .forgot:hover {
+        opacity: 1;
+      }
+      /* Submit button */
+      .auth-btn {
+        width: 100%;
+        padding: 13px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: "Orbitron", monospace;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        background: linear-gradient(
+          135deg,
+          #c0392b 0%,
+          #e74c3c 50%,
+          #c0392b 100%
+        );
+        background-size: 200% 100%;
+        color: #fff;
+        transition:
+          background-position 0.4s,
+          transform 0.15s,
+          box-shadow 0.3s;
+        box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
+        position: relative;
+        overflow: hidden;
+      }
+      .auth-btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.1),
+          transparent
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .auth-btn:hover {
+        background-position: 100% 0;
+        box-shadow: 0 6px 28px rgba(231, 76, 60, 0.5);
+        transform: translateY(-1px);
+      }
+      .auth-btn:hover::before {
+        opacity: 1;
+      }
+      .auth-btn:active {
+        transform: scale(0.98);
+      }
+      /* Divider */
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 20px 0;
+        font-size: 0.72rem;
+        color: #1e2e44;
+      }
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #1a2840;
+      }
+      /* OAuth */
+      .oauth-btn {
+        width: 100%;
+        padding: 11px;
+        border: 1px solid #1a2840;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #080e1c;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #7a9ab8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition:
+          border-color 0.25s,
+          color 0.25s,
+          background 0.25s;
+      }
+      .oauth-btn:hover {
+        border-color: #3a5878;
+        color: #c0d0e8;
+        background: #0d1525;
+      }
+      /* Error / success messages */
+      .msg {
+        padding: 10px 14px;
+        border-radius: 5px;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.82rem;
+        margin-bottom: 16px;
+        display: none;
+      }
+      .msg.error {
+        background: rgba(231, 76, 60, 0.12);
+        border: 1px solid rgba(231, 76, 60, 0.3);
+        color: #e74c3c;
+      }
+      .msg.success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.25);
+        color: #22c55e;
+      }
+      /* Terms */
+      .terms {
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.73rem;
+        color: #2a3a54;
+        text-align: center;
+        margin-top: 20px;
+        line-height: 1.6;
+      }
+      .terms a {
+        color: #e74c3c;
+        opacity: 0.7;
+        cursor: pointer;
+      }
+      .terms a:hover {
+        opacity: 1;
+      }
+      /* Bottom badge */
+      .auth-bottom {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.7rem;
+        color: #1e2e40;
+        letter-spacing: 1px;
+      }
+      /* Responsive */
+      @media (max-width: 900px) {
+        .auth-left {
+          display: none;
+        }
+        .auth-right {
+          width: 100%;
+          padding: 40px 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═══════════════ AUTH PAGE ═══════════════ -->
+    <div id="auth-page">
+      <!-- Left: Cinematic branding panel -->
+      <div class="auth-left">
+        <canvas class="radar-canvas" id="radar-canvas"></canvas>
+        <div class="scan-ring"></div>
+        <div class="scan-ring"></div>
+        <div class="scan-ring"></div>
+        <div class="auth-brand">
+          <div class="auth-logo">
+            SAFE<span>DRIVE</span><br /><span
+              style="font-size: 1.1rem; color: #1e3050; letter-spacing: 8px"
+              >.AI</span
+            >
+          </div>
+          <div class="auth-tagline">
+            Accident Prevention · Before It Happens
+          </div>
+        </div>
+        <div class="auth-stats">
+          <div class="astat">
+            <div class="astat-num" id="cnt-lives">0</div>
+            <div class="astat-lbl">Lives Protected</div>
+          </div>
+          <div class="astat">
+            <div class="astat-num" id="cnt-alerts">0</div>
+            <div class="astat-lbl">Alerts Fired</div>
+          </div>
+          <div class="astat">
+            <div class="astat-num" id="cnt-uptime">0</div>
+            <div class="astat-lbl">Uptime %</div>
+          </div>
+        </div>
+        <div class="auth-features">
+          <div class="af">
+            <div class="af-dot"></div>
+            Real-time Drowsiness Detection via EAR/MAR
+          </div>
+          <div class="af">
+            <div class="af-dot"></div>
+            6-Emotion Face Recognition
+          </div>
+          <div class="af">
+            <div class="af-dot"></div>
+            Voice Stress Analysis (MFCC/ZCR)
+          </div>
+          <div class="af">
+            <div class="af-dot"></div>
+            Fog · Low-light · Blur Visibility Check
+          </div>
+          <div class="af">
+            <div class="af-dot"></div>
+            Child Presence in Locked Vehicle
+          </div>
+          <div class="af">
+            <div class="af-dot"></div>
+            Weighted Real-time Risk Score Engine
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Auth forms -->
+      <div class="auth-right">
+        <div class="auth-tabs">
+          <div
+            class="auth-tab active"
+            id="tab-login"
+            onclick="switchTab('login')"
+          >
+            SIGN IN
+          </div>
+          <div class="auth-tab" id="tab-signup" onclick="switchTab('signup')">
+            REGISTER
+          </div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div class="auth-form visible" id="form-login">
+          <div class="form-title">Welcome Back</div>
+          <div class="form-sub">
+            Sign in to access your real-time driver safety dashboard
+          </div>
+          <div class="msg error" id="login-err"></div>
+          <div class="msg success" id="login-ok"></div>
+          <div class="field">
+            <label>Email Address</label>
+            <input
+              type="email"
+              id="l-email"
+              placeholder="driver@safedrive.ai"
+              autocomplete="email"
+            />
+            <span class="field-icon">✉</span>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input
+              type="password"
+              id="l-pass"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <span class="field-icon">🔒</span>
+            <span class="pwd-toggle" onclick="togglePwd('l-pass', this)"
+              >👁</span
+            >
+          </div>
+          <div class="flex-row">
+            <label class="check-label"
+              ><input type="checkbox" checked /> Remember me</label
+            >
+            <span class="forgot">Forgot password?</span>
+          </div>
+          <button class="auth-btn" onclick="doLogin()">
+            ACCESS DASHBOARD →
+          </button>
+          <div class="divider">OR CONTINUE WITH</div>
+          <button class="oauth-btn" onclick="quickLogin()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="#4a6888"
+                stroke-width="1.5"
+              />
+              <path
+                d="M12 6v6l4 2"
+                stroke="#e74c3c"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+            Continue as Guest (Demo Mode)
+          </button>
+          <div class="terms">
+            By signing in you agree to our <a>Terms of Service</a> &amp;
+            <a>Privacy Policy</a>
+          </div>
+        </div>
+
+        <!-- SIGNUP FORM -->
+        <div class="auth-form" id="form-signup">
+          <div class="form-title">Create Account</div>
+          <div class="form-sub">
+            Join SafeDrive.ai and start protecting drivers today
+          </div>
+          <div class="msg error" id="signup-err"></div>
+          <div class="msg success" id="signup-ok"></div>
+          <div class="field">
+            <label>Full Name</label>
+            <input type="text" id="s-name" placeholder="Your full name" />
+            <span class="field-icon">👤</span>
+          </div>
+          <div class="field">
+            <label>Email Address</label>
+            <input
+              type="email"
+              id="s-email"
+              placeholder="driver@safedrive.ai"
+            />
+            <span class="field-icon">✉</span>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input
+              type="password"
+              id="s-pass"
+              placeholder="Min. 8 characters"
+            />
+            <span class="field-icon">🔒</span>
+            <span class="pwd-toggle" onclick="togglePwd('s-pass', this)"
+              >👁</span
+            >
+          </div>
+          <div class="field">
+            <label>Confirm Password</label>
+            <input
+              type="password"
+              id="s-pass2"
+              placeholder="Re-enter password"
+            />
+            <span class="field-icon">🛡</span>
+          </div>
+          <!-- Password strength bar -->
+          <div
+            style="
+              margin: -8px 0 16px;
+              font-family: &quot;Rajdhani&quot;, sans-serif;
+              font-size: 0.72rem;
+              color: #3a5070;
+            "
+          >
+            Strength:
+            <span id="pwd-strength-lbl" style="color: #2a3a54">—</span>
+            <div
+              style="
+                height: 3px;
+                background: #0a0f1c;
+                border-radius: 2px;
+                margin-top: 5px;
+              "
+            >
+              <div
+                id="pwd-strength-bar"
+                style="
+                  height: 100%;
+                  width: 0%;
+                  border-radius: 2px;
+                  transition:
+                    width 0.3s,
+                    background 0.3s;
+                "
+              ></div>
+            </div>
+          </div>
+          <button class="auth-btn" onclick="doSignup()">
+            CREATE ACCOUNT →
+          </button>
+          <div class="terms">
+            By registering you agree to our <a>Terms of Service</a> &amp;
+            <a>Privacy Policy</a>
+          </div>
+        </div>
+
+        <div class="auth-bottom">
+          SafeDrive.ai v2.0 · Powered by MediaPipe &amp; Web Audio API
+        </div>
+      </div>
+    </div>
+
+    <header>
+      <div class="logo">Safe<span>Drive</span>.ai</div>
+      <div class="hpills">
+        <span class="pill" id="cam-pill">📷 Camera: OFF</span>
+        <span class="pill" id="mic-pill">🎤 Mic: OFF</span>
+        <span
+          class="pill"
+          id="eng-pill"
+          onclick="toggleEngine()"
+          title="Toggle engine state"
+          >🔑 Engine: ON</span
+        >
+        <span
+          class="pill"
+          style="border-color: #e74c3c; color: #e74c3c; cursor: default"
+          ><span class="live-dot"></span>RISK ENGINE</span
+        >
+      </div>
+    </header>
+
+    <div class="wrap">
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="stitle">Navigation</div>
+        <div class="sitem on" data-panel="dashboard">
+          <span class="sitem-icon">📊</span>Dashboard
+        </div>
+        <div class="sitem" data-panel="overview">
+          <span class="sitem-icon">📋</span>Overview
+        </div>
+        <div class="stitle">Risk Engine</div>
+        <div class="sitem" data-panel="module-output">
+          <span class="sitem-icon">📤</span>Module Output
+        </div>
+        <div class="sitem" data-panel="risk-calc">
+          <span class="sitem-icon">🧮</span>Risk Calculation
+        </div>
+        <div class="sitem" data-panel="combined-risk">
+          <span class="sitem-icon">🔗</span>Combined Risk
+        </div>
+        <div class="sitem" data-panel="risk-levels">
+          <span class="sitem-icon">🚦</span>Risk Levels
+        </div>
+        <div class="stitle">Modules</div>
+        <div class="sitem" data-panel="drowsiness">
+          <span class="sitem-icon">👁</span>Drowsiness (EAR)
+        </div>
+        <div class="sitem" data-panel="emotion">
+          <span class="sitem-icon">😊</span>Emotion Detection
+        </div>
+        <div class="sitem" data-panel="stress">
+          <span class="sitem-icon">🎤</span>Stress via Voice
+        </div>
+        <div class="sitem" data-panel="visibility">
+          <span class="sitem-icon">🌫</span>Visibility Check
+        </div>
+        <div class="sitem" data-panel="child">
+          <span class="sitem-icon">👶</span>Child Presence
+        </div>
+        <div class="sitem" data-panel="realtime">
+          <span class="sitem-icon">⚡</span>Realtime Score
+        </div>
+        <div class="sitem" data-panel="alerts">
+          <span class="sitem-icon">🔔</span>Alerts
+        </div>
+      </div>
+
+      <!-- CENTER -->
+      <div class="center">
+        <div class="cam-card">
+          <div class="cam-head">
+            <h3><span class="live-dot"></span>LIVE CAMERA FEED</h3>
+            <span
+              id="fps-tag"
+              style="
+                font-size: 0.68rem;
+                color: var(--muted);
+                font-family: &quot;Share Tech Mono&quot;, monospace;
+              "
+              >-- fps</span
+            >
+          </div>
+          <div class="cam-body" style="max-height: 280px">
+            <video
+              id="vid"
+              autoplay
+              muted
+              playsinline
+              style="max-height: 280px"
+            ></video>
+            <canvas id="overlay"></canvas>
+            <canvas id="emo-canvas"></canvas>
+            <div class="alert-banner" id="alert-banner">
+              ⚠ Drowsiness Detected!
+            </div>
+          </div>
+          <div class="cam-footer">
+            <button class="btn bg" onclick="startAll()">▶ Start</button>
+            <button class="btn br" onclick="stopAll()">⏹ Stop</button>
+            <button class="btn bb" onclick="startMic()">🎤 Enable Mic</button>
+            <span id="status-msg">Click Start to begin monitoring</span>
+          </div>
+        </div>
+        <div class="log-card">
+          <div class="log-head">📋 DRIVING STATUS LOGS</div>
+          <div class="log-body" id="log-body"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="right">
+        <!-- Risk score -->
+        <div class="card">
+          <div class="card-h">Current Risk Score</div>
+          <div class="risk-center">
+            <div id="rnum" style="color: var(--green)">0.0</div>
+            <div id="rlbl" style="color: var(--green)">Low Risk</div>
+          </div>
+          <div class="gauge-track"><div id="gmk" style="left: 1%"></div></div>
+        </div>
+
+        <!-- Sub scores -->
+        <div class="card">
+          <div class="card-h">Module Sub-Scores</div>
+          <div class="subs">
+            <div class="sub">
+              <span class="slbl">👁 Drowsiness</span>
+              <div class="sbg">
+                <div
+                  class="sfill"
+                  id="sf-d"
+                  style="background: var(--red)"
+                ></div>
+              </div>
+              <span class="sval" id="sv-d">0</span>
+            </div>
+            <div class="sub">
+              <span class="slbl">😊 Emotion</span>
+              <div class="sbg">
+                <div
+                  class="sfill"
+                  id="sf-e"
+                  style="background: var(--cyan)"
+                ></div>
+              </div>
+              <span class="sval" id="sv-e">0</span>
+            </div>
+            <div class="sub">
+              <span class="slbl">🎤 Stress</span>
+              <div class="sbg">
+                <div
+                  class="sfill"
+                  id="sf-s"
+                  style="background: var(--purple)"
+                ></div>
+              </div>
+              <span class="sval" id="sv-s">0</span>
+            </div>
+            <div class="sub">
+              <span class="slbl">🌫 Visibility</span>
+              <div class="sbg">
+                <div
+                  class="sfill"
+                  id="sf-v"
+                  style="background: var(--blue)"
+                ></div>
+              </div>
+              <span class="sval" id="sv-v">0</span>
+            </div>
+            <div class="sub">
+              <span class="slbl">👶 Child</span>
+              <div class="sbg">
+                <div
+                  class="sfill"
+                  id="sf-c"
+                  style="background: var(--yellow)"
+                ></div>
+              </div>
+              <span class="sval" id="sv-c">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emotion detection -->
+        <div class="card">
+          <div class="card-h">😊 Emotion Detection (Real-time)</div>
+          <div class="emo-grid" id="emo-grid">
+            <div class="emo-row">
+              <span class="emo-lbl">Happy</span>
+              <div class="emo-bg">
+                <div
+                  class="emo-fill"
+                  id="ef-happy"
+                  style="background: #22c55e"
+                ></div>
+              </div>
+              <span class="emo-pct" id="ep-happy">0%</span>
+            </div>
+            <div class="emo-row">
+              <span class="emo-lbl">Sad</span>
+              <div class="emo-bg">
+                <div
+                  class="emo-fill"
+                  id="ef-sad"
+                  style="background: #3b82f6"
+                ></div>
+              </div>
+              <span class="emo-pct" id="ep-sad">0%</span>
+            </div>
+            <div class="emo-row">
+              <span class="emo-lbl">Angry</span>
+              <div class="emo-bg">
+                <div
+                  class="emo-fill"
+                  id="ef-angry"
+                  style="background: #e74c3c"
+                ></div>
+              </div>
+              <span class="emo-pct" id="ep-angry">0%</span>
+            </div>
+            <div class="emo-row">
+              <span class="emo-lbl">Surprised</span>
+              <div class="emo-bg">
+                <div
+                  class="emo-fill"
+                  id="ef-surprised"
+                  style="background: #f0a500"
+                ></div>
+              </div>
+              <span class="emo-pct" id="ep-surprised">0%</span>
+            </div>
+            <div class="emo-row">
+              <span class="emo-lbl">Neutral</span>
+              <div class="emo-bg">
+                <div
+                  class="emo-fill"
+                  id="ef-neutral"
+                  style="background: #6b7280"
+                ></div>
+              </div>
+              <span class="emo-pct" id="ep-neutral">100%</span>
+            </div>
+            <div class="emo-row">
+              <span class="emo-lbl">Fear</span>
+              <div class="emo-bg">
+                <div
+                  class="emo-fill"
+                  id="ef-fear"
+                  style="background: #a855f7"
+                ></div>
+              </div>
+              <span class="emo-pct" id="ep-fear">0%</span>
+            </div>
+          </div>
+          <div
+            style="
+              padding: 4px 12px 8px;
+              font-size: 0.75rem;
+              color: var(--muted);
+            "
+          >
+            Dominant:
+            <span id="dom-emo" style="color: #fff; font-weight: 600"
+              >Neutral</span
+            >
+          </div>
+        </div>
+
+        <!-- Detection status -->
+        <div class="card">
+          <div class="card-h">Detection Status</div>
+          <div class="dot-row">
+            <div class="dot dok" id="d-face"></div>
+            <span>Face Detected</span><span class="dval" id="dv-face">NO</span>
+          </div>
+          <div class="dot-row">
+            <div class="dot doff" id="d-drow"></div>
+            <span>Drowsiness (EAR)</span
+            ><span class="dval" id="dv-drow">--</span>
+          </div>
+          <div class="dot-row">
+            <div class="dot doff" id="d-yawn"></div>
+            <span>Yawning (MAR)</span><span class="dval" id="dv-yawn">--</span>
+          </div>
+          <div class="dot-row">
+            <div class="dot doff" id="d-vis"></div>
+            <span>Visibility</span><span class="dval" id="dv-vis">--</span>
+          </div>
+          <div class="dot-row">
+            <div class="dot doff" id="d-child"></div>
+            <span>Child Safety</span><span class="dval" id="dv-child">--</span>
+          </div>
+          <div class="dot-row">
+            <div class="dot doff" id="d-stress"></div>
+            <span>Stress Level</span><span class="dval" id="dv-stress">--</span>
+          </div>
+          <div class="mgrid">
+            <div class="mbox">
+              <div class="mval" id="m-ear" style="color: var(--green)">--</div>
+              <div class="mlbl">EAR</div>
+            </div>
+            <div class="mbox">
+              <div class="mval" id="m-mar" style="color: var(--yellow)">--</div>
+              <div class="mlbl">MAR</div>
+            </div>
+            <div class="mbox">
+              <div class="mval" id="m-blinks" style="color: var(--blue)">0</div>
+              <div class="mlbl">Blinks</div>
+            </div>
+            <div class="mbox">
+              <div class="mval" id="m-bright" style="color: var(--cyan)">
+                --
+              </div>
+              <div class="mlbl">Brightness</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mic / Stress -->
+        <div class="card">
+          <div class="card-h">🎤 Voice Stress Analysis</div>
+          <div class="mic-wrap">
+            <div class="wave-bars" id="wave">
+              <div class="wb" style="height: 4px"></div>
+              <div class="wb" style="height: 8px"></div>
+              <div class="wb" style="height: 5px"></div>
+              <div class="wb" style="height: 12px"></div>
+              <div class="wb" style="height: 6px"></div>
+              <div class="wb" style="height: 9px"></div>
+              <div class="wb" style="height: 4px"></div>
+              <div class="wb" style="height: 7px"></div>
+              <div class="wb" style="height: 10px"></div>
+              <div class="wb" style="height: 5px"></div>
+            </div>
+            <span id="mic-label" style="color: var(--muted)">Mic inactive</span>
+            <span id="mic-level-text">-- dB</span>
+          </div>
+          <div
+            style="
+              padding: 4px 12px 10px;
+              display: flex;
+              gap: 10px;
+              align-items: center;
+            "
+          >
+            <div style="font-size: 0.78rem; color: var(--muted)">Stress:</div>
+            <div
+              id="stress-badge"
+              style="font-size: 0.82rem; font-weight: 700; color: var(--green)"
+            >
+              Normal
+            </div>
+            <div
+              style="margin-left: auto; font-size: 0.72rem; color: var(--muted)"
+            >
+              Energy:
+              <span
+                id="voice-energy"
+                style="font-family: &quot;Share Tech Mono&quot;, monospace"
+                >--</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent alerts -->
+        <div class="card">
+          <div class="card-h">🔔 Recent Alerts</div>
+          <div id="alerts-list" style="padding: 4px 0 8px">
+            <div
+              style="padding: 8px 12px; color: var(--muted); font-size: 0.75rem"
+            >
+              No alerts yet
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* eslint-disable */
+      /* jshint esversion:6, -W069 */
+      /* global FaceMesh, Camera */
+
+      // ═══════════════════════════════════════════════════════════════
+      //  SAFEDRIVE.AI — All 8 objectives using real webcam + mic
+      // ═══════════════════════════════════════════════════════════════
+
+      const vid = document.getElementById("vid");
+      const overlay = document.getElementById("overlay");
+      const octx = overlay.getContext("2d");
+      const emoCanvas = document.getElementById("emo-canvas");
+      const eCtx = emoCanvas.getContext("2d");
+
+      let running = false,
+        micRunning = false;
+      let engineOn = true;
+      let blinks = 0,
+        lastEyeOpen = true;
+      let prevGray = null;
+      let fpsCount = 0,
+        fpsLast = 0;
+      const scoreHistory = [];
+      const logs = [],
+        alertsArr = [];
+
+      // State
+      const S = {
+        ear: 0,
+        mar: 0,
+        drowsy: false,
+        yawning: false,
+        faceDetected: false,
+        emotions: {
+          happy: 0,
+          sad: 0,
+          angry: 0,
+          surprised: 0,
+          neutral: 0,
+          fear: 0,
+        },
+        domEmotion: "Neutral",
+        stressLevel: "Normal",
+        visibility: "Clear",
+        visScore: 0,
+        childAlert: false,
+        micLevel: 0,
+        micEnergy: 0,
+        dScore: 0,
+        eScore: 0,
+        sScore: 0,
+        vScore: 0,
+        cScore: 0,
+        risk: 0,
+      };
+
+      // ── MediaPipe Face Mesh setup ──────────────────────────────────
+      const faceMesh = new FaceMesh({
+        locateFile: (f) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`,
+      });
+      faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+
+      // Face landmark indices
+      const LEFT_EYE = [362, 385, 387, 263, 373, 380];
+      const RIGHT_EYE = [33, 160, 158, 133, 153, 144];
+      const MOUTH_IDX = [61, 291, 0, 17, 78, 308, 82, 312];
+      const FACE_OVAL = [
+        10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365,
+        379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234,
+        127, 162, 21, 54, 103, 67, 109,
+      ];
+
+      faceMesh.onResults(onFaceResults);
+
+      let camera = null;
+
+      // Loading overlay removed - dashboard shows directly after login
+
+      // ── Euclidean distance ─────────────────────────────────────────
+      function dist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      // ── EAR calculation ───────────────────────────────────────────
+      function calcEAR(lm, idx) {
+        const p = idx.map((i) => lm[i]);
+        const A = dist(p[1], p[5]),
+          B = dist(p[2], p[4]),
+          C = dist(p[0], p[3]);
+        return C > 0 ? (A + B) / (2 * C) : 0;
+      }
+
+      // ── MAR calculation ───────────────────────────────────────────
+      function calcMAR(lm) {
+        const p = MOUTH_IDX.map((i) => lm[i]);
+        const A = dist(p[2], p[3]),
+          B = dist(p[4], p[5]),
+          C = dist(p[6], p[7]);
+        const D = dist(p[0], p[1]);
+        return D > 0 ? (A + B + C) / (2 * D) : 0;
+      }
+
+      // ── Emotion estimation from face landmarks ────────────────────
+      // Uses geometry ratios — no ML model needed
+      function estimateEmotion(lm) {
+        // Mouth corners Y relative to lip center
+        const leftCorner = lm[61],
+          rightCorner = lm[291];
+        const topLip = lm[13],
+          botLip = lm[14];
+        const noseTip = lm[1];
+        const leftBrow = lm[70],
+          rightBrow = lm[300];
+        const leftEye = lm[159],
+          rightEye = lm[386];
+
+        // Smile: corners higher than lip center
+        const lipCenter = (topLip.y + botLip.y) / 2;
+        const smileScore = clamp(
+          (lipCenter - (leftCorner.y + rightCorner.y) / 2) * 80 + 0.5,
+          0,
+          1,
+        );
+
+        // Brow raise (surprise/fear): brows above eyes
+        const browLift = clamp(
+          (leftEye.y - leftBrow.y + (rightEye.y - rightBrow.y)) * 40,
+          0,
+          1,
+        );
+
+        // Mouth open (surprise/fear)
+        const mar = calcMAR(lm);
+        const mouthOpen = clamp(mar * 2, 0, 1);
+
+        // Frown (sad/angry): corners below lip center
+        const frownScore = clamp(
+          ((leftCorner.y + rightCorner.y) / 2 - lipCenter) * 80 + 0.5,
+          0,
+          1,
+        );
+
+        // Brow furrow: inner brows close together
+        const innerBrowDist = dist(lm[107], lm[336]);
+        const eyeDist = dist(lm[33], lm[263]);
+        const browFurrow = clamp(1 - (innerBrowDist / eyeDist) * 1.6, 0, 1);
+
+        let e = {
+          happy: smileScore * (1 - frownScore) * 0.85 + Math.random() * 0.05,
+          sad: frownScore * (1 - smileScore) * 0.7 + Math.random() * 0.04,
+          angry: frownScore * browFurrow * 0.8 + Math.random() * 0.03,
+          surprised: browLift * mouthOpen * 0.9 + Math.random() * 0.04,
+          fear:
+            browLift * (1 - smileScore) * mouthOpen * 0.7 +
+            Math.random() * 0.03,
+          neutral: 0,
+        };
+
+        // Neutral is the residual
+        const sum1 = Object.values(e).reduce((a, b) => a + b, 0);
+        e.neutral = clamp(1 - sum1 * 0.9, 0.05, 1);
+
+        // Normalise
+        const total = Object.values(e).reduce((a, b) => a + b, 0);
+        Object.keys(e).forEach((k) => (e[k] = e[k] / total));
+
+        // Smooth with previous
+        Object.keys(e).forEach((k) => {
+          S.emotions[k] = lerp(S.emotions[k] || 0, e[k], 0.25);
+        });
+
+        // Dominant
+        S.domEmotion = Object.entries(S.emotions).sort(
+          (a, b) => b[1] - a[1],
+        )[0][0];
+        S.domEmotion =
+          S.domEmotion.charAt(0).toUpperCase() + S.domEmotion.slice(1);
+
+        // Emotion sub-score: angry/fear/sad → higher risk
+        S.eScore =
+          Math.round(
+            ((S.emotions.angry + S.emotions.fear) * 10 + S.emotions.sad * 5) *
+              10,
+          ) / 10;
+        S.eScore = clamp(S.eScore, 0, 10);
+      }
+
+      // ── Face results callback ──────────────────────────────────────
+      let drowsyFrames = 0,
+        yawnFrames = 0;
+
+      function onFaceResults(results) {
+        if (!running) return;
+        overlay.width = vid.videoWidth || 640;
+        overlay.height = vid.videoHeight || 360;
+        octx.clearRect(0, 0, overlay.width, overlay.height);
+
+        S.faceDetected = !!(
+          results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0
+        );
+
+        if (S.faceDetected) {
+          const lm = results.multiFaceLandmarks[0];
+          const W = overlay.width,
+            H = overlay.height;
+          const pts = lm.map((p) => ({ x: p.x * W, y: p.y * H }));
+
+          // EAR
+          const lEAR = calcEAR(lm, LEFT_EYE);
+          const rEAR = calcEAR(lm, RIGHT_EYE);
+          S.ear = +((lEAR + rEAR) / 2).toFixed(3);
+
+          // MAR
+          S.mar = +calcMAR(lm).toFixed(3);
+
+          // Drowsiness
+          if (S.ear < 0.25) {
+            drowsyFrames++;
+          } else {
+            if (drowsyFrames >= 2) blinks++;
+            drowsyFrames = 0;
+          }
+          S.drowsy = drowsyFrames >= 18;
+
+          // Yawning
+          if (S.mar > 0.6) {
+            yawnFrames++;
+          } else yawnFrames = 0;
+          S.yawning = yawnFrames >= 12;
+
+          // Drowsiness sub-score
+          S.dScore = clamp(
+            (S.drowsy ? 7 : 0) +
+              (S.yawning ? 3 : 0) +
+              Math.max(0, (0.25 - S.ear) * 20),
+            0,
+            10,
+          );
+
+          // Emotions
+          estimateEmotion(lm);
+
+          // Draw face oval
+          octx.beginPath();
+          const ovalColor = S.drowsy ? "#e74c3c" : "#22c55e";
+          octx.strokeStyle = ovalColor;
+          octx.lineWidth = 2;
+          FACE_OVAL.forEach((idx, i) => {
+            const p = pts[idx];
+            if (i === 0) octx.moveTo(p.x, p.y);
+            else octx.lineTo(p.x, p.y);
+          });
+          octx.closePath();
+          octx.stroke();
+
+          // Draw eye landmarks
+          const eyeColor = S.drowsy ? "#e74c3c" : "#06b6d4";
+          [...LEFT_EYE, ...RIGHT_EYE].forEach((idx) => {
+            octx.beginPath();
+            octx.arc(pts[idx].x, pts[idx].y, 2.5, 0, Math.PI * 2);
+            octx.fillStyle = eyeColor;
+            octx.fill();
+          });
+
+          // Draw mouth landmarks
+          MOUTH_IDX.forEach((idx) => {
+            octx.beginPath();
+            octx.arc(pts[idx].x, pts[idx].y, 2.5, 0, Math.PI * 2);
+            octx.fillStyle = S.yawning ? "#e74c3c" : "#f0a500";
+            octx.fill();
+          });
+
+          // Info overlay top-left
+          octx.fillStyle = "rgba(0,0,0,0.6)";
+          octx.fillRect(4, 4, 200, 60);
+          octx.fillStyle = "#b0c8e0";
+          octx.font = "12px Share Tech Mono,monospace";
+          octx.fillText(`EAR: ${S.ear} ${S.drowsy ? "⚠ DROWSY" : ""}`, 10, 20);
+          octx.fillText(
+            `MAR: ${S.mar} ${S.yawning ? "⚠ YAWNING" : ""}`,
+            10,
+            36,
+          );
+          octx.fillText(`EMO: ${S.domEmotion}`, 10, 52);
+
+          // Alerts
+          if (S.drowsy) addAlert("⚠ Drowsiness Detected", "danger");
+          if (S.yawning) addAlert("😮 Yawning Detected", "warn");
+        } else {
+          S.ear = 0;
+          S.mar = 0;
+          S.drowsy = false;
+          S.yawning = false;
+          S.dScore = 0;
+          S.eScore = 0;
+          drowsyFrames = 0;
+          yawnFrames = 0;
+          octx.fillStyle = "rgba(0,0,0,0.5)";
+          octx.fillRect(4, 4, 180, 24);
+          octx.fillStyle = "#e74c3c";
+          octx.font = "13px Rajdhani,sans-serif";
+          octx.fillText("No face detected", 10, 20);
+        }
+
+        // Visibility analysis from canvas
+        analyzeVisibility();
+        // Child presence
+        analyzeChildPresence();
+        // Combined risk
+        calcRisk();
+        // Update UI
+        updateUI();
+        // FPS
+        fpsCount++;
+        const now = performance.now();
+        if (now - fpsLast >= 1000) {
+          document.getElementById("fps-tag").textContent = fpsCount + " fps";
+          fpsCount = 0;
+          fpsLast = now;
+        }
+      }
+
+      // ── Obj 4: Visibility analysis from video frame ────────────────
+      function analyzeVisibility() {
+        try {
+          const W = 80,
+            H = 45;
+          emoCanvas.width = W;
+          emoCanvas.height = H;
+          eCtx.drawImage(vid, 0, 0, W, H);
+          const data = eCtx.getImageData(0, 0, W, H).data;
+          let bright = 0,
+            pixCount = W * H;
+          const grays = [];
+          for (let i = 0; i < data.length; i += 4) {
+            const g =
+              data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+            bright += g;
+            grays.push(g);
+          }
+          bright = bright / pixCount;
+
+          // Contrast (std dev)
+          const mean = bright;
+          let variance = 0;
+          grays.forEach((g) => (variance += (g - mean) ** 2));
+          const contrast = Math.sqrt(variance / pixCount);
+
+          // Laplacian-like blur estimate (simplified)
+          let lapSum = 0,
+            cnt = 0;
+          for (let y = 1; y < H - 1; y++)
+            for (let x = 1; x < W - 1; x++) {
+              const idx = (y * W + x) * 4;
+              const lap = Math.abs(
+                4 * grays[y * W + x] -
+                  grays[(y - 1) * W + x] -
+                  grays[(y + 1) * W + x] -
+                  grays[y * W + x - 1] -
+                  grays[y * W + x + 1],
+              );
+              lapSum += lap;
+              cnt++;
+            }
+          const blur = lapSum / cnt;
+
+          if (bright < 40) {
+            S.visibility = "Low-Light";
+            S.visScore = 4;
+          } else if (contrast < 25) {
+            S.visibility = "Fog";
+            S.visScore = 5;
+          } else if (blur < 3) {
+            S.visibility = "Blurry";
+            S.visScore = 3;
+          } else {
+            S.visibility = "Clear";
+            S.visScore = 0;
+          }
+
+          S.vScore = S.visScore;
+          S.brightness = Math.round(bright);
+          if (S.visibility !== "Clear")
+            addAlert("🌫 " + S.visibility + " visibility", "warn");
+        } catch (e) {}
+      }
+
+      // ── Obj 5: Child presence via motion when engine off ──────────
+      let prevPixels = null;
+      function analyzeChildPresence() {
+        if (engineOn) {
+          S.childAlert = false;
+          S.cScore = 0;
+          return;
+        }
+        try {
+          const W = 80,
+            H = 45;
+          emoCanvas.width = W;
+          emoCanvas.height = H;
+          eCtx.drawImage(vid, 0, 0, W, H);
+          const curr = eCtx.getImageData(0, 0, W, H).data;
+          let diff = 0;
+          if (prevPixels) {
+            for (let i = 0; i < curr.length; i += 4) {
+              diff +=
+                Math.abs(curr[i] - prevPixels[i]) +
+                Math.abs(curr[i + 1] - prevPixels[i + 1]) +
+                Math.abs(curr[i + 2] - prevPixels[i + 2]);
+            }
+            diff /= W * H * 3;
+          }
+          prevPixels = new Uint8ClampedArray(curr);
+          S.childAlert = diff > 8;
+          S.cScore = S.childAlert ? 9 : 0;
+          if (S.childAlert) addAlert("👶 Motion in locked vehicle!", "danger");
+        } catch (e) {}
+      }
+
+      // ── Combined Risk Score ────────────────────────────────────────
+      function calcRisk() {
+        const raw =
+          S.dScore * 0.3 +
+          S.eScore * 0.2 +
+          S.sScore * 0.2 +
+          S.vScore * 0.15 +
+          S.cScore * 0.15;
+        scoreHistory.push(raw);
+        if (scoreHistory.length > 30) scoreHistory.shift();
+        S.risk = scoreHistory.reduce((a, b) => a + b, 0) / scoreHistory.length;
+      }
+
+      // ── Obj 3: Voice / Stress analysis via Web Audio API ──────────
+      let audioCtx = null,
+        analyser = null,
+        micStream = null;
+      let stressHistory = [];
+
+      function startMic() {
+        if (micRunning) return;
+        navigator.mediaDevices
+          .getUserMedia({ audio: true, video: false })
+          .then((stream) => {
+            micStream = stream;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            const src = audioCtx.createMediaStreamSource(stream);
+            src.connect(analyser);
+            micRunning = true;
+            document.getElementById("mic-pill").textContent = "🎤 Mic: ON";
+            document.getElementById("mic-pill").className = "pill active-green";
+            addLog("Microphone enabled — stress analysis active", "g");
+            micLoop();
+          })
+          .catch(() => {
+            addLog("Mic permission denied", "d");
+          });
+      }
+
+      function micLoop() {
+        if (!micRunning) return;
+        const buf = new Float32Array(analyser.frequencyBinCount);
+        analyser.getFloatTimeDomainData(buf);
+        const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freqBuf);
+
+        // Energy (RMS)
+        let rms = 0;
+        buf.forEach((v) => (rms += v * v));
+        rms = Math.sqrt(rms / buf.length);
+        S.micLevel = rms;
+
+        // Spectral centroid (higher centroid → more stress)
+        let wSum = 0,
+          dSum = 0;
+        freqBuf.forEach((v, i) => {
+          wSum += v * i;
+          dSum += v;
+        });
+        const centroid = dSum > 0 ? wSum / dSum : 0;
+
+        // ZCR
+        let zcr = 0;
+        for (let i = 1; i < buf.length; i++)
+          if (buf[i] >= 0 !== buf[i - 1] >= 0) zcr++;
+        zcr /= buf.length;
+
+        // Stress heuristic
+        const energy = rms * 200;
+        S.micEnergy = Math.round(energy * 10) / 10;
+        stressHistory.push({ rms, centroid, zcr });
+        if (stressHistory.length > 30) stressHistory.shift();
+
+        // Classify using rolling stats
+        const avgRms =
+          stressHistory.reduce((a, b) => a + b.rms, 0) / stressHistory.length;
+        const avgCentroid =
+          stressHistory.reduce((a, b) => a + b.centroid, 0) /
+          stressHistory.length;
+        const avgZcr =
+          stressHistory.reduce((a, b) => a + b.zcr, 0) / stressHistory.length;
+
+        if (avgRms > 0.12 && avgCentroid > 60 && avgZcr > 0.15) {
+          S.stressLevel = "High Stress";
+          S.sScore = 8;
+          addAlert("🎤 High Stress Level", "danger");
+        } else if (avgRms > 0.05 && (avgCentroid > 40 || avgZcr > 0.08)) {
+          S.stressLevel = "Mild Stress";
+          S.sScore = 4;
+        } else {
+          S.stressLevel = "Normal";
+          S.sScore = 0;
+        }
+
+        // Animate wave bars
+        const bars = document.querySelectorAll(".wb");
+        const barData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(barData);
+        const step = Math.floor(barData.length / bars.length);
+        bars.forEach((b, i) => {
+          const h = Math.max(3, (barData[i * step] / 255) * 28);
+          b.style.height = h + "px";
+          b.style.background =
+            S.stressLevel === "High Stress"
+              ? "#e74c3c"
+              : S.stressLevel === "Mild Stress"
+                ? "#f0a500"
+                : "#a855f7";
+        });
+
+        setTimeout(micLoop, 100);
+      }
+
+      // ── Update all UI elements ─────────────────────────────────────
+      let alertThrottle = {};
+      function addAlert(msg, type) {
+        const now = Date.now();
+        if (alertThrottle[msg] && now - alertThrottle[msg] < 4000) return;
+        alertThrottle[msg] = now;
+        const ts = new Date().toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        alertsArr.unshift({ msg, type, ts });
+        if (alertsArr.length > 15) alertsArr.pop();
+        addLog(msg, type === "danger" ? "d" : "w");
+      }
+
+      let logThrottle = {};
+      function addLog(msg, cls = "") {
+        const key = msg + cls;
+        const now = Date.now();
+        if (logThrottle[key] && now - logThrottle[key] < 3000) return;
+        logThrottle[key] = now;
+        const ts = new Date().toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        logs.unshift({ msg, cls, ts });
+        if (logs.length > 50) logs.pop();
+        renderLogs();
+      }
+      function renderLogs() {
+        document.getElementById("log-body").innerHTML = logs
+          .slice(0, 14)
+          .map(
+            (l) => `<div class="log-entry ${l.cls}">[${l.ts}] ${l.msg}</div>`,
+          )
+          .join("");
+      }
+      function renderAlerts() {
+        const el = document.getElementById("alerts-list");
+        if (!alertsArr.length) {
+          el.innerHTML =
+            '<div style="padding:8px 12px;color:var(--muted);font-size:.75rem">No alerts yet</div>';
+          return;
+        }
+        el.innerHTML = alertsArr
+          .slice(0, 6)
+          .map(
+            (a) =>
+              `<div class="al-item"><span class="badge ${a.type === "danger" ? "bdr" : "bdw"}">${a.msg}</span><span class="at">${a.ts}</span></div>`,
+          )
+          .join("");
+      }
+
+      function setDot(id, cls) {
+        document.getElementById(id).className = "dot " + cls;
+      }
+      function setBar(fid, vid, v) {
+        document.getElementById(fid).style.width =
+          clamp((v / 10) * 100, 0, 100) + "%";
+        document.getElementById(vid).textContent = v.toFixed ? v.toFixed(1) : v;
+      }
+      function rColor(r) {
+        return r >= 6
+          ? "var(--red)"
+          : r >= 3
+            ? "var(--yellow)"
+            : "var(--green)";
+      }
+      function rLabel(r) {
+        return r >= 6 ? "High Risk" : r >= 3 ? "Medium Risk" : "Low Risk";
+      }
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+      function clamp(v, lo, hi) {
+        return Math.max(lo, Math.min(hi, v));
+      }
+
+      let uiFrame = 0;
+      function updateUI() {
+        uiFrame++;
+        const r = S.risk;
+
+        // Risk score
+        document.getElementById("rnum").textContent = r.toFixed(1);
+        document.getElementById("rnum").style.color = rColor(r);
+        document.getElementById("rlbl").textContent = rLabel(r);
+        document.getElementById("rlbl").style.color = rColor(r);
+        document.getElementById("gmk").style.left =
+          clamp((r / 10) * 98, 1, 98) + "%";
+
+        // Sub bars
+        setBar("sf-d", "sv-d", S.dScore);
+        setBar("sf-e", "sv-e", S.eScore);
+        setBar("sf-s", "sv-s", S.sScore);
+        setBar("sf-v", "sv-v", S.vScore);
+        setBar("sf-c", "sv-c", S.cScore);
+
+        // Emotions
+        const emos = ["happy", "sad", "angry", "surprised", "neutral", "fear"];
+        emos.forEach((k) => {
+          const pct = Math.round(S.emotions[k] * 100);
+          document.getElementById("ef-" + k).style.width = pct + "%";
+          document.getElementById("ep-" + k).textContent = pct + "%";
+        });
+        document.getElementById("dom-emo").textContent = S.domEmotion;
+
+        // Dot rows
+        setDot("d-face", S.faceDetected ? "dok" : "dd");
+        document.getElementById("dv-face").textContent = S.faceDetected
+          ? "YES"
+          : "NO";
+        setDot("d-drow", S.drowsy ? "dd" : S.faceDetected ? "dok" : "doff");
+        document.getElementById("dv-drow").textContent = S.faceDetected
+          ? S.drowsy
+            ? "DROWSY"
+            : "EAR " + S.ear
+          : "--";
+        setDot("d-yawn", S.yawning ? "dd" : S.faceDetected ? "dok" : "doff");
+        document.getElementById("dv-yawn").textContent = S.faceDetected
+          ? S.yawning
+            ? "YAWN"
+            : "MAR " + S.mar
+          : "--";
+        setDot("d-vis", S.visibility !== "Clear" ? "dw" : "dok");
+        document.getElementById("dv-vis").textContent = S.visibility;
+        setDot("d-child", S.childAlert ? "dd" : engineOn ? "dok" : "dw");
+        document.getElementById("dv-child").textContent = S.childAlert
+          ? "ALERT"
+          : engineOn
+            ? "OK"
+            : "Watch";
+        setDot(
+          "d-stress",
+          S.stressLevel === "High Stress"
+            ? "dd"
+            : S.stressLevel === "Mild Stress"
+              ? "dw"
+              : micRunning
+                ? "dok"
+                : "doff",
+        );
+        document.getElementById("dv-stress").textContent = micRunning
+          ? S.stressLevel
+          : "--";
+
+        // Metrics
+        document.getElementById("m-ear").textContent = S.faceDetected
+          ? S.ear
+          : "--";
+        document.getElementById("m-ear").style.color =
+          S.ear < 0.25 && S.faceDetected ? "var(--red)" : "var(--green)";
+        document.getElementById("m-mar").textContent = S.faceDetected
+          ? S.mar
+          : "--";
+        document.getElementById("m-mar").style.color =
+          S.mar > 0.6 && S.faceDetected ? "var(--red)" : "var(--yellow)";
+        document.getElementById("m-blinks").textContent = blinks;
+        document.getElementById("m-bright").textContent =
+          S.brightness != null ? S.brightness + "" : "--";
+
+        // Mic
+        document.getElementById("mic-label").textContent = micRunning
+          ? "Analyzing voice…"
+          : "Mic inactive";
+        document.getElementById("mic-label").style.color = micRunning
+          ? "var(--text)"
+          : "var(--muted)";
+        document.getElementById("mic-level-text").textContent = micRunning
+          ? Math.round(S.micEnergy) + " E"
+          : "--";
+        const sb = document.getElementById("stress-badge");
+        sb.textContent = S.stressLevel;
+        sb.style.color =
+          S.stressLevel === "High Stress"
+            ? "var(--red)"
+            : S.stressLevel === "Mild Stress"
+              ? "var(--yellow)"
+              : "var(--green)";
+
+        // Alert banner on video
+        const banner = document.getElementById("alert-banner");
+        if (S.drowsy || S.childAlert) {
+          banner.style.display = "block";
+          banner.textContent = S.childAlert
+            ? "⚠ Child in Vehicle!"
+            : "⚠ Drowsiness Detected! Take a Break.";
+        } else banner.style.display = "none";
+
+        // Alerts list (throttled render)
+        if (uiFrame % 10 === 0) renderAlerts();
+
+        // Header pills
+        const cp = document.getElementById("cam-pill");
+        cp.textContent = running ? "📷 Camera: ON" : "📷 Camera: OFF";
+        cp.className = "pill " + (running ? "active-green" : "");
+        const mp = document.getElementById("mic-pill");
+        mp.textContent = micRunning ? "🎤 Mic: ON" : "🎤 Mic: OFF";
+        mp.className = "pill " + (micRunning ? "active-green" : "");
+      }
+
+      // ── Start / Stop ───────────────────────────────────────────────
+      function startAll() {
+        if (running) return;
+        document.getElementById("status-msg").textContent =
+          "Requesting camera…";
+        navigator.mediaDevices
+          .getUserMedia({
+            video: { width: 640, height: 360, facingMode: "user" },
+            audio: false,
+          })
+          .then((stream) => {
+            vid.srcObject = stream;
+            vid.play();
+            running = true;
+            camera = new Camera(vid, {
+              onFrame: async () => {
+                await faceMesh.send({ image: vid });
+              },
+              width: 640,
+              height: 360,
+            });
+            camera.start();
+            document.getElementById("status-msg").textContent =
+              "Monitoring active";
+            addLog("Camera started — face detection active", "g");
+            addLog("Drowsiness, emotion, visibility modules running", "g");
+            startMic();
+          })
+          .catch((e) => {
+            document.getElementById("status-msg").textContent =
+              "Camera denied — " + e.message;
+            addLog("Camera error: " + e.message, "d");
+          });
+      }
+
+      function stopAll() {
+        running = false;
+        if (camera) camera.stop();
+        if (vid.srcObject) vid.srcObject.getTracks().forEach((t) => t.stop());
+        if (micStream) micStream.getTracks().forEach((t) => t.stop());
+        micRunning = false;
+        addLog("Monitoring stopped", "w");
+        document.getElementById("status-msg").textContent =
+          "Stopped. Click Start to resume.";
+      }
+
+      function toggleEngine() {
+        engineOn = !engineOn;
+        document.getElementById("eng-pill").textContent =
+          "🔑 Engine: " + (engineOn ? "ON" : "OFF");
+        addLog(
+          "Engine " +
+            (engineOn ? "turned ON" : "turned OFF — child detection active"),
+          engineOn ? "g" : "w",
+        );
+        if (!engineOn) addAlert("🔑 Engine off — child watch active", "warn");
+      }
+
+      // Sidebar nav - switch layout and show toast notification
+      document.querySelectorAll(".sitem").forEach((el) => {
+        el.addEventListener("click", function () {
+          const panelId = this.getAttribute("data-panel");
+          if (!panelId) return;
+
+          // Update active state
+          document
+            .querySelectorAll(".sitem")
+            .forEach((e) => e.classList.remove("on"));
+          this.classList.add("on");
+
+          // Show toast notification
+          showNavToast(this.textContent.trim());
+        });
+      });
+
+      // Toast notification
+      function showNavToast(label) {
+        const toast = document.createElement("div");
+        toast.style.cssText =
+          "position:fixed;top:70px;right:24px;background:var(--panel);border:2px solid var(--green);border-radius:8px;padding:14px 18px;font-family:Rajdhani,sans-serif;font-size:.9rem;color:var(--text);z-index:9998;animation:fadeUp .4s ease;box-shadow:0 8px 24px rgba(0,0,0,.4)";
+        toast.textContent = "✓ " + label;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.style.transition = "opacity .4s ease";
+          toast.style.opacity = "0";
+          setTimeout(() => toast.remove(), 400);
+        }, 2500);
+      }
+
+      addLog("SafeDrive.ai ready — click ▶ Start", "g");
+      renderLogs();
+      renderAlerts();
+
+      // ── Init: reset all bars to 0 on load ────────────────────────
+      (function initBars() {
+        ["happy", "sad", "angry", "surprised", "neutral", "fear"].forEach(
+          function (k) {
+            var el = document.getElementById("ef-" + k);
+            if (el) {
+              el.style.width = k === "neutral" ? "0%" : "0%";
+            }
+            var pe = document.getElementById("ep-" + k);
+            if (pe) {
+              pe.textContent = "0%";
+            }
+          },
+        );
+        ["sf-d", "sf-e", "sf-s", "sf-v", "sf-c"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) {
+            el.style.width = "0%";
+          }
+        });
+      })();
+
+      // ════ AUTH PAGE FUNCTIONS ════
+
+      function switchTab(tab) {
+        document
+          .getElementById("form-login")
+          .classList.toggle("visible", tab === "login");
+        document
+          .getElementById("form-signup")
+          .classList.toggle("visible", tab === "signup");
+        document
+          .getElementById("tab-login")
+          .classList.toggle("active", tab === "login");
+        document
+          .getElementById("tab-signup")
+          .classList.toggle("active", tab === "signup");
+      }
+
+      function showMsg(id, text, type) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = "msg " + type;
+        el.style.display = "block";
+        if (type === "success")
+          setTimeout(() => (el.style.display = "none"), 3000);
+      }
+
+      function togglePwd(id, btn) {
+        const inp = document.getElementById(id);
+        inp.type = inp.type === "password" ? "text" : "password";
+        btn.textContent = inp.type === "password" ? "👁" : "🙈";
+      }
+
+      function doLogin() {
+        const email = document.getElementById("l-email").value.trim();
+        const pass = document.getElementById("l-pass").value;
+        if (!email || !pass) {
+          showMsg("login-err", "Please fill in all fields", "error");
+          return;
+        }
+        const user = USERS.find((u) => u.email === email && u.pass === pass);
+        if (!user) {
+          showMsg("login-err", "Invalid email or password", "error");
+          return;
+        }
+        showMsg(
+          "login-ok",
+          "Welcome back, " + user.name + "! Loading dashboard…",
+          "success",
+        );
+        setTimeout(() => enterDashboard(user.name), 1200);
+      }
+
+      function quickLogin() {
+        enterDashboard("Guest Driver");
+      }
+
+      function doSignup() {
+        const name = document.getElementById("s-name").value.trim();
+        const email = document.getElementById("s-email").value.trim();
+        const pass = document.getElementById("s-pass").value;
+        const pass2 = document.getElementById("s-pass2").value;
+        if (!name || !email || !pass || !pass2) {
+          showMsg("signup-err", "Please fill in all fields", "error");
+          return;
+        }
+        if (pass.length < 8) {
+          showMsg(
+            "signup-err",
+            "Password must be at least 8 characters",
+            "error",
+          );
+          return;
+        }
+        if (pass !== pass2) {
+          showMsg("signup-err", "Passwords do not match", "error");
+          return;
+        }
+        if (USERS.find((u) => u.email === email)) {
+          showMsg("signup-err", "Email already registered", "error");
+          return;
+        }
+        USERS.push({ email, pass, name });
+        showMsg("signup-ok", "Account created! Signing you in…", "success");
+        setTimeout(() => enterDashboard(name), 1200);
+      }
+
+      // Password strength meter
+      document.addEventListener("DOMContentLoaded", () => {
+        const pi = document.getElementById("s-pass");
+        if (pi)
+          pi.addEventListener("input", function () {
+            const v = this.value,
+              len = v.length;
+            let score = 0;
+            if (len >= 8) score++;
+            if (len >= 12) score++;
+            if (/[A-Z]/.test(v)) score++;
+            if (/[0-9]/.test(v)) score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
+            const lbl = document.getElementById("pwd-strength-lbl");
+            const bar = document.getElementById("pwd-strength-bar");
+            const map = [
+              ["", 0, "#0a0f1c"],
+              ["Weak", 20, "#e74c3c"],
+              ["Fair", 45, "#f0a500"],
+              ["Good", 70, "#3b82f6"],
+              ["Strong", 90, "#22c55e"],
+              ["Excellent", 100, "#22c55e"],
+            ];
+            const [t, w, c] = map[Math.min(score, 5)];
+            lbl.textContent = t;
+            lbl.style.color = c;
+            bar.style.width = w + "%";
+            bar.style.background = c;
+          });
+      });
+
+      function enterDashboard(name) {
+        const ap = document.getElementById("auth-page");
+        ap.style.transition = "opacity .6s ease, transform .6s ease";
+        ap.style.opacity = "0";
+        ap.style.transform = "scale(1.03)";
+        setTimeout(() => {
+          ap.style.display = "none";
+          // Show a welcome toast
+          const toast = document.createElement("div");
+          toast.style.cssText =
+            "position:fixed;bottom:24px;right:24px;background:#0d1525;border:1px solid #22c55e;border-radius:8px;padding:12px 20px;font-family:Rajdhani,sans-serif;font-size:.9rem;color:#22c55e;z-index:9998;animation:fadeUp .4s ease;box-shadow:0 8px 24px rgba(0,0,0,.4)";
+          toast.innerHTML =
+            "✓ Signed in as <strong>" + name + "</strong> — Dashboard Ready";
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3500);
+        }, 600);
+      }
+
+      // ─── Radar canvas animation ──────────────────────────────────
+      const radarC = document.getElementById("radar-canvas");
+      function initRadar() {
+        if (!radarC) return;
+        const rc = radarC.getContext("2d");
+        const resize = () => {
+          radarC.width = radarC.offsetWidth;
+          radarC.height = radarC.offsetHeight;
+        };
+        resize();
+        window.addEventListener("resize", resize);
+        let angle = 0,
+          nodes = [],
+          frame = 0;
+        for (let i = 0; i < 18; i++) {
+          nodes.push({
+            x: Math.random() * radarC.width,
+            y: Math.random() * radarC.height,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.3,
+            r: Math.random() * 2 + 1,
+          });
+        }
+        function draw() {
+          const W = radarC.width,
+            H = radarC.height,
+            cx = W / 2,
+            cy = H / 2;
+          rc.clearRect(0, 0, W, H);
+          // Grid
+          rc.strokeStyle = "rgba(30,48,70,.5)";
+          rc.lineWidth = 0.5;
+          for (let x = 0; x < W; x += 50) {
+            rc.beginPath();
+            rc.moveTo(x, 0);
+            rc.lineTo(x, H);
+            rc.stroke();
+          }
+          for (let y = 0; y < H; y += 50) {
+            rc.beginPath();
+            rc.moveTo(0, y);
+            rc.lineTo(W, y);
+            rc.stroke();
+          }
+          // Concentric circles
+          for (let r = 60; r < Math.max(W, H) * 0.7; r += 80) {
+            rc.beginPath();
+            rc.arc(cx, cy, r, 0, Math.PI * 2);
+            rc.strokeStyle = "rgba(30,48,80,.35)";
+            rc.lineWidth = 0.5;
+            rc.stroke();
+          }
+          // Crosshairs
+          rc.strokeStyle = "rgba(231,76,60,.2)";
+          rc.lineWidth = 0.8;
+          rc.beginPath();
+          rc.moveTo(cx, 0);
+          rc.lineTo(cx, H);
+          rc.stroke();
+          rc.beginPath();
+          rc.moveTo(0, cy);
+          rc.lineTo(W, cy);
+          rc.stroke();
+          // Sweep
+          const sweep = rc.createConicalGradient ? null : null;
+          rc.save();
+          rc.translate(cx, cy);
+          rc.rotate(angle);
+          const grad = rc.createLinearGradient(0, 0, 300, 0);
+          grad.addColorStop(0, "rgba(231,76,60,.35)");
+          grad.addColorStop(1, "rgba(231,76,60,0)");
+          rc.beginPath();
+          rc.moveTo(0, 0);
+          rc.arc(0, 0, Math.max(W, H), 0, 0.6);
+          rc.closePath();
+          rc.fillStyle = grad;
+          rc.fill();
+          rc.restore();
+          angle += 0.008;
+          // Nodes + connections
+          nodes.forEach((n) => {
+            n.x += n.vx;
+            n.y += n.vy;
+            if (n.x < 0 || n.x > W) n.vx *= -1;
+            if (n.y < 0 || n.y > H) n.vy *= -1;
+            rc.beginPath();
+            rc.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+            rc.fillStyle = "rgba(231,76,60,.5)";
+            rc.fill();
+          });
+          nodes.forEach((a, i) =>
+            nodes.slice(i + 1).forEach((b) => {
+              const d = Math.hypot(a.x - b.x, a.y - b.y);
+              if (d < 140) {
+                rc.beginPath();
+                rc.moveTo(a.x, a.y);
+                rc.lineTo(b.x, b.y);
+                rc.strokeStyle = `rgba(30,60,90,${(1 - d / 140) * 0.4})`;
+                rc.lineWidth = 0.5;
+                rc.stroke();
+              }
+            }),
+          );
+          // Blips on sweep
+          if (frame % 40 === 0) {
+            const bx = cx + Math.random() * 200 - 100,
+              by = cy + Math.random() * 200 - 100;
+            rc.beginPath();
+            rc.arc(bx, by, 3, 0, Math.PI * 2);
+            rc.fillStyle = "rgba(231,76,60,.9)";
+            rc.fill();
+            rc.beginPath();
+            rc.arc(bx, by, 8, 0, Math.PI * 2);
+            rc.strokeStyle = "rgba(231,76,60,.3)";
+            rc.lineWidth = 1;
+            rc.stroke();
+          }
+          frame++;
+          requestAnimationFrame(draw);
+        }
+        draw();
+      }
+      // Animated counters
+      function animateCounter(id, target, suffix = "") {
+        let v = 0;
+        const el = document.getElementById(id);
+        if (!el) return;
+        const step = target / 60;
+        const iv = setInterval(() => {
+          v = Math.min(v + step, target);
+          el.textContent = Math.round(v) + suffix;
+          if (v >= target) clearInterval(iv);
+        }, 25);
+      }
+      window.addEventListener("load", () => {
+        initRadar();
+        setTimeout(() => {
+          animateCounter("cnt-lives", 12487, "");
+          animateCounter("cnt-alerts", 98340, "");
+          animateCounter("cnt-uptime", 99, "");
+        }, 600);
+      });
+
+      // Enter key on login
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const lf = document.getElementById("form-login");
+          const sf = document.getElementById("form-signup");
+          if (lf && lf.classList.contains("visible")) doLogin();
+          else if (sf && sf.classList.contains("visible")) doSignup();
+        }
+      });
+    </script>
+  </body>
+</html>
