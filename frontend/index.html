@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SafeDrive.ai v3 — Real-Time Driver Safety</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<style>
+
+/* ═══════════════════════════════════════════════════════
+   SAFEDRIVE.AI v3 — COCKPIT DESIGN SYSTEM
+   Aesthetic: Military-grade HUD meets racing cockpit
+   Dark, dense, purposeful — every pixel earns its place
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:       #060a10;
+  --bg2:      #0a0f1a;
+  --panel:    #0c1220;
+  --panel2:   #111827;
+  --border:   #1a2640;
+  --border2:  #243350;
+  --text:     #b8ccdf;
+  --text2:    #7a9bb8;
+  --muted:    #3d5570;
+  --red:      #ff3b3b;
+  --red2:     #cc1f1f;
+  --orange:   #ff6b2b;
+  --yellow:   #f5a623;
+  --green:    #00e676;
+  --green2:   #00b85c;
+  --blue:     #2979ff;
+  --blue2:    #1a56cc;
+  --cyan:     #00e5ff;
+  --purple:   #d500f9;
+  --teal:     #1de9b6;
+  --white:    #e8f0fa;
+  --scan:     rgba(0,229,255,0.04);
+  --glow-r:   rgba(255,59,59,0.35);
+  --glow-g:   rgba(0,230,118,0.3);
+  --glow-y:   rgba(245,166,35,0.3);
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:'Exo 2',sans-serif; font-size:13px; overflow:hidden; }
+
+/* ── SCANLINE EFFECT ── */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9000;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+/* ══════════════ LOGIN SCREEN ══════════════ */
+#login-screen {
+  position:fixed; inset:0; z-index:8000;
+  background: radial-gradient(ellipse at 20% 50%, #0a1428 0%, #060a10 60%);
+  display:flex; align-items:center; justify-content:center;
+}
+.login-bg {
+  position:absolute; inset:0; overflow:hidden;
+}
+.login-bg canvas { position:absolute; inset:0; }
+.login-box {
+  position:relative; z-index:2;
+  width:400px;
+  background: rgba(10,15,26,0.92);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:36px 36px 32px;
+  box-shadow: 0 0 60px rgba(0,229,255,0.08), 0 0 120px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+}
+.login-logo {
+  text-align:center; margin-bottom:28px;
+}
+.login-logo-title {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:2.4rem; font-weight:900; letter-spacing:4px; text-transform:uppercase;
+  color:var(--white);
+}
+.login-logo-title span { color:var(--cyan); }
+.login-logo-sub {
+  font-size:0.72rem; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-top:4px;
+}
+.login-logo-line {
+  width:60px; height:2px; background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  margin:10px auto 0;
+}
+.tab-row {
+  display:flex; gap:0; margin-bottom:22px;
+  border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.tab-btn {
+  flex:1; padding:9px; background:transparent; border:none; cursor:pointer;
+  font-family:'Exo 2',sans-serif; font-size:0.82rem; font-weight:600;
+  letter-spacing:1.5px; text-transform:uppercase; color:var(--muted);
+  transition:all 0.2s;
+}
+.tab-btn.active { background:var(--cyan); color:#060a10; }
+.field-group { margin-bottom:14px; }
+.field-label { font-size:0.68rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.field-input {
+  width:100%; padding:10px 14px;
+  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  border-radius:7px; color:var(--white); font-family:'Exo 2',sans-serif; font-size:0.9rem;
+  outline:none; transition:border-color 0.2s, box-shadow 0.2s;
+}
+.field-input:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,229,255,0.1); }
+.login-btn {
+  width:100%; padding:12px; margin-top:6px;
+  background:linear-gradient(135deg,var(--cyan),var(--teal));
+  border:none; border-radius:8px; cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif; font-size:1.1rem; font-weight:700;
+  letter-spacing:3px; text-transform:uppercase; color:#060a10;
+  transition:all 0.2s; box-shadow:0 4px 20px rgba(0,229,255,0.3);
+}
+.login-btn:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(0,229,255,0.45); }
+.login-btn:active { transform:translateY(0); }
+.guest-btn {
+  width:100%; padding:9px; margin-top:10px;
+  background:transparent; border:1px solid var(--border);
+  border-radius:8px; cursor:pointer;
+  font-family:'Exo 2',sans-serif; font-size:0.82rem; font-weight:600;
+  color:var(--muted); text-transform:uppercase; letter-spacing:1px;
+  transition:all 0.2s;
+}
+.guest-btn:hover { border-color:var(--border2); color:var(--text); }
+.login-err { color:var(--red); font-size:0.78rem; margin-top:8px; min-height:18px; }
+.login-creds {
+  margin-top:18px; padding:12px; background:rgba(0,229,255,0.04);
+  border:1px solid rgba(0,229,255,0.15); border-radius:8px;
+  font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:var(--text2); line-height:1.8;
+}
+.form-section { display:none; }
+.form-section.visible { display:block; }
+
+/* ══════════════ MAIN APP ══════════════ */
+#app { display:none; height:100vh; flex-direction:column; }
+#app.visible { display:flex; }
+
+/* ── TOP NAV BAR ── */
+.topbar {
+  height:48px; flex-shrink:0;
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 14px; gap:10px;
+  position:relative; z-index:100;
+}
+.topbar::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),var(--blue),transparent);
+  opacity:0.5;
+}
+.tb-logo {
+  font-family:'Barlow Condensed',sans-serif; font-size:1.3rem; font-weight:900;
+  letter-spacing:3px; text-transform:uppercase; color:var(--white); flex-shrink:0;
+}
+.tb-logo span { color:var(--cyan); }
+.tb-version { font-size:0.6rem; color:var(--muted); letter-spacing:2px; margin-left:4px; align-self:flex-end; margin-bottom:8px; }
+.tb-divider { width:1px; height:24px; background:var(--border); margin:0 6px; }
+.tb-pills { display:flex; gap:5px; flex:1; align-items:center; }
+.pill {
+  padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:600;
+  letter-spacing:0.8px; text-transform:uppercase;
+  border:1px solid var(--border); background:var(--panel2); cursor:pointer;
+  color:var(--text2); transition:all 0.15s; white-space:nowrap;
+}
+.pill:hover { border-color:var(--border2); color:var(--text); }
+.pill.on-green { border-color:var(--green2); color:var(--green); background:rgba(0,230,118,0.08); }
+.pill.on-red   { border-color:var(--red2);   color:var(--red);   background:rgba(255,59,59,0.08); animation:pill-blink 0.7s infinite; }
+.pill.on-yellow{ border-color:var(--yellow);  color:var(--yellow); }
+@keyframes pill-blink { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* risk badge */
+#risk-badge {
+  padding:4px 14px; border-radius:20px; font-family:'Share Tech Mono',monospace;
+  font-size:0.8rem; font-weight:700; letter-spacing:1px; border:1.5px solid var(--green);
+  color:var(--green); transition:all 0.35s; min-width:130px; text-align:center;
+}
+#risk-badge.med  { border-color:var(--yellow); color:var(--yellow); box-shadow:0 0 8px var(--glow-y); }
+#risk-badge.high { border-color:var(--red);    color:var(--red);    box-shadow:0 0 14px var(--glow-r); animation:pill-blink 0.5s infinite; }
+
+/* session timer */
+#session-timer { font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:var(--muted); letter-spacing:1px; }
+.tb-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.tb-user { font-size:0.75rem; color:var(--text2); letter-spacing:0.5px; }
+.tb-logout { font-size:0.68rem; padding:3px 10px; border-radius:4px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all 0.15s; letter-spacing:1px; text-transform:uppercase; }
+.tb-logout:hover { border-color:var(--red2); color:var(--red); }
+
+/* ── GRID ── */
+.grid {
+  flex:1; display:grid;
+  grid-template-columns: 200px 1fr 290px;
+  grid-template-rows: 1fr;
+  gap:6px; padding:6px;
+  min-height:0; overflow:hidden;
+}
+
+/* ── CARD BASE ── */
+.card {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px; overflow:hidden;
+}
+.card-h {
+  padding:7px 12px; font-size:0.65rem; font-weight:700;
+  letter-spacing:2.5px; text-transform:uppercase; color:var(--muted);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:6px; justify-content:space-between;
+}
+.card-h .ch-accent { color:var(--cyan); }
+
+/* ── LEFT COLUMN ── */
+.left { display:flex; flex-direction:column; gap:6px; overflow:hidden; }
+
+/* status dots */
+.status-grid { padding:8px 10px; display:flex; flex-direction:column; gap:2px; }
+.status-row {
+  display:flex; align-items:center; gap:7px; padding:4px 6px; border-radius:5px;
+  transition:background 0.2s; cursor:default;
+}
+.status-row:hover { background:rgba(255,255,255,0.03); }
+.dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:all 0.3s;
+}
+.dot-ok  { background:var(--green);  box-shadow:0 0 6px var(--glow-g); }
+.dot-off { background:var(--muted); }
+.dot-warn{ background:var(--yellow); box-shadow:0 0 6px var(--glow-y); animation:dot-pulse 1s infinite; }
+.dot-danger { background:var(--red); box-shadow:0 0 8px var(--glow-r); animation:dot-pulse 0.5s infinite; }
+@keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.status-name { font-size:0.75rem; color:var(--text2); flex:1; }
+.status-val  { font-family:'Share Tech Mono',monospace; font-size:0.7rem; color:var(--text); }
+
+/* driver metrics */
+.metrics-grid { padding:8px 10px; display:flex; flex-direction:column; gap:4px; }
+.metric-row { display:flex; align-items:center; justify-content:space-between; padding:3px 0; }
+.metric-lbl { font-size:0.68rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
+.metric-val { font-family:'Share Tech Mono',monospace; font-size:0.82rem; font-weight:700; color:var(--text); }
+.metric-val.green { color:var(--green); }
+.metric-val.red   { color:var(--red); }
+.metric-val.yellow{ color:var(--yellow); }
+
+/* emotion bars left */
+.emo-list { padding:8px 10px; display:flex; flex-direction:column; gap:4px; overflow:auto; }
+.emo-row { display:flex; align-items:center; gap:6px; }
+.emo-name { font-size:0.68rem; color:var(--text2); width:52px; flex-shrink:0; }
+.emo-bar-wrap { flex:1; height:5px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; }
+.emo-bar { height:100%; border-radius:3px; transition:width 0.25s; }
+.emo-pct { font-family:'Share Tech Mono',monospace; font-size:0.65rem; color:var(--muted); width:28px; text-align:right; }
+
+/* ── CENTER COLUMN ── */
+.center { display:flex; flex-direction:column; gap:6px; min-width:0; overflow:hidden; }
+.cam-wrap {
+  position:relative; flex:1; min-height:0;
+  background:#000; border-radius:8px; overflow:hidden;
+  border:1px solid var(--border);
+}
+.cam-wrap video, .cam-wrap canvas {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
+canvas#emo-canvas { display:none; }
+canvas#overlay { z-index:2; }
+
+/* cam corners (HUD frame) */
+.cam-wrap::before, .cam-wrap::after,
+.cam-corner-bl, .cam-corner-br {
+  content:''; position:absolute; width:20px; height:20px; z-index:3; pointer-events:none;
+}
+.cam-wrap::before  { top:8px;    left:8px;    border-top:2px solid var(--cyan);  border-left:2px solid var(--cyan); }
+.cam-wrap::after   { top:8px;    right:8px;   border-top:2px solid var(--cyan);  border-right:2px solid var(--cyan); }
+.cam-corner-bl     { bottom:8px; left:8px;    border-bottom:2px solid var(--cyan); border-left:2px solid var(--cyan); }
+.cam-corner-br     { bottom:8px; right:8px;   border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan); }
+
+/* alert banner on video */
+.cam-alert {
+  display:none; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  padding:10px 24px; border-radius:8px;
+  font-family:'Barlow Condensed',sans-serif; font-size:1.2rem; font-weight:700;
+  letter-spacing:2px; text-transform:uppercase; text-align:center;
+  white-space:nowrap; pointer-events:none; z-index:10;
+  animation:cam-alert-pulse 0.65s infinite;
+}
+@keyframes cam-alert-pulse {
+  0%,100%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  50%    { opacity:0.85; transform:translate(-50%,-50%) scale(1.02); }
+}
+.cam-alert.drowsy  { background:rgba(255,59,59,0.93);  color:#fff; box-shadow:0 0 30px rgba(255,59,59,0.5); }
+.cam-alert.yawn    { background:rgba(255,107,43,0.9);  color:#fff; }
+.cam-alert.child   { background:rgba(180,0,0,0.97);    color:#fff; box-shadow:0 0 40px rgba(255,0,0,0.7); }
+.cam-alert.high    { background:rgba(200,0,0,0.95);    color:#fff; box-shadow:0 0 50px rgba(255,0,0,0.8); }
+
+/* cam status strip */
+.cam-status {
+  position:absolute; bottom:0; left:0; right:0; z-index:5;
+  padding:5px 12px; background:rgba(6,10,16,0.85);
+  backdrop-filter:blur(4px);
+  display:flex; align-items:center; gap:10px;
+  border-top:1px solid rgba(0,229,255,0.15);
+}
+.cs-item { display:flex; align-items:center; gap:4px; }
+.cs-label { font-size:0.65rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+.cs-val { font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:var(--text); }
+
+/* cam controls */
+.cam-controls {
+  display:flex; gap:6px; align-items:center; padding:6px 0 2px;
+  flex-wrap:wrap;
+}
+.btn {
+  padding:6px 14px; border-radius:5px; border:1px solid; cursor:pointer;
+  font-family:'Exo 2',sans-serif; font-size:0.78rem; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; transition:all 0.15s;
+}
+.btn-start { background:rgba(0,230,118,0.12); border-color:var(--green2); color:var(--green); }
+.btn-start:hover { background:rgba(0,230,118,0.2); box-shadow:0 0 12px var(--glow-g); }
+.btn-stop  { background:rgba(255,59,59,0.1);  border-color:var(--red2);   color:var(--red); }
+.btn-stop:hover  { background:rgba(255,59,59,0.18); }
+.btn-mic   { background:rgba(41,121,255,0.1); border-color:var(--blue2);  color:var(--blue); }
+.btn-mic:hover   { background:rgba(41,121,255,0.18); }
+.btn-eng   { background:rgba(245,166,35,0.1); border-color:#b87d00;       color:var(--yellow); }
+.btn-test  { background:rgba(213,0,249,0.08); border-color:#8800bb;       color:var(--purple); }
+#status-msg { font-size:0.72rem; color:var(--muted); letter-spacing:0.5px; margin-left:auto; }
+
+/* log card */
+.log-card { flex-shrink:0; }
+.log-body { padding:4px; max-height:100px; overflow-y:auto; }
+.log-entry {
+  font-family:'Share Tech Mono',monospace; font-size:0.68rem;
+  padding:2px 8px; border-radius:3px; line-height:1.5; color:var(--text2);
+}
+.log-entry.g { color:var(--green); }
+.log-entry.d { color:var(--red); }
+.log-entry.w { color:var(--yellow); }
+
+/* ── RIGHT COLUMN ── */
+.right { display:flex; flex-direction:column; gap:6px; overflow-y:auto; }
+
+/* risk gauge */
+.risk-block { padding:12px 14px 10px; }
+.risk-number-row { display:flex; align-items:baseline; gap:6px; margin-bottom:4px; }
+.risk-num {
+  font-family:'Barlow Condensed',sans-serif; font-size:3.2rem; font-weight:900;
+  line-height:1; transition:color 0.4s;
+}
+.risk-denom { font-size:0.85rem; color:var(--muted); }
+.risk-label { font-size:0.75rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+.risk-gauge-wrap {
+  position:relative; height:10px; background:rgba(255,255,255,0.06);
+  border-radius:10px; overflow:hidden; margin-bottom:8px;
+}
+.risk-gauge-track { height:100%; border-radius:10px; transition:width 0.4s, background 0.4s; }
+.risk-gauge-wrap::after {
+  content:''; position:absolute; top:0; left:30%; width:1px; height:100%;
+  background:rgba(255,255,255,0.15);
+}
+.risk-gauge-wrap::before {
+  content:''; position:absolute; top:0; left:60%; width:1px; height:100%;
+  background:rgba(255,255,255,0.15);
+}
+/* sub-scores */
+.sub-grid { display:flex; flex-direction:column; gap:5px; padding:8px 14px 10px; }
+.sub-row { display:flex; align-items:center; gap:6px; }
+.sub-lbl { font-size:0.66rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); width:80px; flex-shrink:0; }
+.sub-bar-wrap { flex:1; height:5px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; }
+.sub-bar { height:100%; border-radius:3px; transition:width 0.3s; }
+.sub-val { font-family:'Share Tech Mono',monospace; font-size:0.68rem; width:24px; text-align:right; color:var(--text2); }
+
+/* micro-chart */
+.chart-wrap { padding:8px 12px 10px; }
+.mini-chart { width:100%; height:48px; position:relative; }
+.mc-canvas { width:100%; height:100%; }
+
+/* alerts */
+.alert-list { padding:4px 0 6px; }
+.al-item {
+  display:flex; align-items:center; gap:6px; padding:5px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+}
+.al-badge {
+  padding:2px 7px; border-radius:3px; font-size:0.65rem; font-weight:700;
+  letter-spacing:0.5px; white-space:nowrap; flex-shrink:0;
+}
+.al-danger { background:rgba(255,59,59,0.15); color:var(--red); border:1px solid rgba(255,59,59,0.3); }
+.al-warn   { background:rgba(245,166,35,0.12); color:var(--yellow); border:1px solid rgba(245,166,35,0.25); }
+.al-info   { background:rgba(0,229,255,0.08);  color:var(--cyan);   border:1px solid rgba(0,229,255,0.2); }
+.al-text { font-size:0.72rem; color:var(--text2); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.al-time { font-family:'Share Tech Mono',monospace; font-size:0.62rem; color:var(--muted); flex-shrink:0; }
+
+/* session stats */
+.session-grid { padding:8px 12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.sstat-box {
+  background:rgba(255,255,255,0.025); border:1px solid var(--border);
+  border-radius:6px; padding:8px 10px; text-align:center;
+}
+.sstat-val { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:700; color:var(--text); }
+.sstat-lbl { font-size:0.6rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+
+/* voice waveform */
+.waveform-wrap { padding:4px 10px 8px; }
+.waveform { display:flex; align-items:flex-end; justify-content:center; gap:2px; height:32px; }
+.wb { width:3px; border-radius:2px 2px 0 0; height:4px; background:var(--purple); transition:height 0.08s; }
+.stress-row { display:flex; align-items:center; justify-content:space-between; padding:0 10px 6px; }
+.stress-badge { font-size:0.72rem; font-weight:700; letter-spacing:1px; color:var(--green); }
+.mic-energy  { font-family:'Share Tech Mono',monospace; font-size:0.68rem; color:var(--muted); }
+
+/* ══════════════ DANGER ALARM SYSTEM ══════════════ */
+/* full-screen danger glow */
+#danger-glow {
+  display:none; position:fixed; inset:0; z-index:9100; pointer-events:none;
+  animation:danger-glow-anim 0.5s infinite;
+}
+@keyframes danger-glow-anim {
+  0%,100%{ box-shadow:inset 0 0 0px rgba(255,59,59,0); }
+  50%    { box-shadow:inset 0 0 60px rgba(255,59,59,0.25), inset 0 0 120px rgba(255,59,59,0.1); }
+}
+/* red strip bar */
+#danger-bar {
+  display:none; position:fixed; top:0; left:0; right:0; height:3px; z-index:9200;
+  background:linear-gradient(90deg,var(--red),var(--orange),var(--red));
+  background-size:200% 100%;
+  animation:danger-bar-anim 0.8s linear infinite;
+  box-shadow:0 0 10px rgba(255,59,59,0.9);
+}
+@keyframes danger-bar-anim { 0%{background-position:0%} 100%{background-position:200%} }
+
+/* alarm modal */
+#alarm-modal {
+  display:none; position:fixed; top:58px; right:16px; z-index:9500;
+  width:360px; max-width:calc(100vw - 32px);
+  background:rgba(8,12,22,0.97);
+  border:1px solid var(--red);
+  border-radius:12px;
+  box-shadow: 0 0 0 1px rgba(255,59,59,0.2), 0 0 40px rgba(255,59,59,0.35), 0 20px 60px rgba(0,0,0,0.8);
+  backdrop-filter:blur(24px);
+  font-family:'Exo 2',sans-serif;
+  animation:alarm-slide 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  overflow:hidden;
+}
+@keyframes alarm-slide { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
+#alarm-modal.shake { animation:alarm-shake 0.35s ease; }
+@keyframes alarm-shake {
+  0%,100%{transform:translateX(0)} 15%{transform:translateX(-10px)} 30%{transform:translateX(10px)}
+  45%{transform:translateX(-7px)} 60%{transform:translateX(7px)} 75%{transform:translateX(-4px)}
+}
+.am-header {
+  padding:12px 16px;
+  display:flex; align-items:center; gap:10px;
+  background:linear-gradient(135deg,rgba(255,59,59,0.25),rgba(200,0,0,0.15));
+  border-bottom:1px solid rgba(255,59,59,0.3);
+}
+.am-icon { font-size:1.8rem; animation:am-icon-spin 2s linear infinite; flex-shrink:0; }
+@keyframes am-icon-spin { 0%,100%{transform:rotate(0deg)} 10%{transform:rotate(-15deg)} 20%{transform:rotate(15deg)} 30%{transform:rotate(-10deg)} 40%{transform:rotate(0deg)} }
+.am-head-text { flex:1; }
+.am-title { font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:var(--red); }
+.am-subtitle { font-size:0.7rem; color:rgba(255,255,255,0.45); letter-spacing:1px; text-transform:uppercase; margin-top:2px; }
+.am-close { cursor:pointer; color:rgba(255,255,255,0.35); font-size:1rem; padding:4px 8px; border:1px solid rgba(255,255,255,0.1); border-radius:5px; transition:all 0.15s; }
+.am-close:hover { color:#fff; border-color:rgba(255,255,255,0.3); }
+.am-body { padding:14px 16px; }
+.am-msg { font-size:0.9rem; color:var(--white); line-height:1.5; margin-bottom:12px; }
+.am-score-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.am-score-big { font-family:'Barlow Condensed',sans-serif; font-size:3rem; font-weight:900; color:var(--red); line-height:1; }
+.am-score-info { flex:1; }
+.am-score-lbl { font-size:0.65rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.am-score-bar-wrap { height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; }
+.am-score-bar { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--yellow),var(--orange),var(--red)); transition:width 0.3s; }
+.am-level { font-size:0.72rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--red); margin-top:5px; }
+.am-actions { display:flex; gap:8px; }
+.am-btn { flex:1; padding:9px; border-radius:6px; border:none; cursor:pointer; font-family:'Exo 2',sans-serif; font-weight:700; font-size:0.78rem; letter-spacing:1.5px; text-transform:uppercase; transition:all 0.2s; }
+.am-snooze { background:rgba(255,255,255,0.05); color:var(--text2); border:1px solid var(--border); }
+.am-snooze:hover { background:rgba(255,255,255,0.1); color:var(--text); }
+.am-ack { background:linear-gradient(135deg,var(--red2),#880000); color:#fff; box-shadow:0 4px 16px rgba(255,59,59,0.3); }
+.am-ack:hover { box-shadow:0 6px 20px rgba(255,59,59,0.45); transform:translateY(-1px); }
+.am-footer { padding:8px 16px; border-top:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.am-sound-row { display:flex; align-items:center; gap:6px; margin-left:auto; cursor:pointer; }
+.am-sound-lbl { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.am-sound-dot { width:8px; height:8px; border-radius:50%; background:var(--green); transition:background 0.2s; }
+.am-sound-dot.off { background:var(--muted); }
+.am-countdown { font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:var(--muted); }
+
+/* snooze countdown bar */
+#snooze-bar {
+  display:none; position:fixed; bottom:0; left:0; z-index:9400;
+  height:3px; background:var(--yellow);
+  transition:width 1s linear;
+  box-shadow:0 0 8px rgba(245,166,35,0.7);
+}
+
+/* ══════════════ SCROLLBAR ══════════════ */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div id="login-screen">
+  <div class="login-bg"><canvas id="radar-canvas"></canvas></div>
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-title">Safe<span>Drive</span>.ai</div>
+      <div class="login-logo-sub">Real-Time Driver Safety Monitor · v3.0</div>
+      <div class="login-logo-line"></div>
+    </div>
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab-btn" onclick="switchTab('signup')">Register</button>
+    </div>
+    <!-- LOGIN -->
+    <div id="form-login" class="form-section visible">
+      <div class="field-group">
+        <div class="field-label">Email Address</div>
+        <input class="field-input" id="l-email" type="email" placeholder="driver@example.com" autocomplete="email"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Password</div>
+        <input class="field-input" id="l-pw" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div class="login-err" id="l-err"></div>
+      <button class="login-btn" onclick="doLogin()">Access Dashboard</button>
+      <button class="guest-btn" onclick="doGuest()">Continue as Guest</button>
+    </div>
+    <!-- SIGNUP -->
+    <div id="form-signup" class="form-section">
+      <div class="field-group">
+        <div class="field-label">Full Name</div>
+        <input class="field-input" id="s-name" type="text" placeholder="John Driver"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Email Address</div>
+        <input class="field-input" id="s-email" type="email" placeholder="driver@example.com"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Password (min 8 chars)</div>
+        <input class="field-input" id="s-pw" type="password" placeholder="Create password"/>
+      </div>
+      <div class="login-err" id="s-err"></div>
+      <button class="login-btn" onclick="doSignup()">Create Account</button>
+    </div>
+    <div class="login-creds">
+      demo@test.com / demo1234&nbsp;&nbsp;|&nbsp;&nbsp;admin@safedrive.ai / admin123
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ DANGER SYSTEM ══════════ -->
+<div id="danger-glow"></div>
+<div id="danger-bar"></div>
+<div id="snooze-bar" style="width:100%"></div>
+
+<!-- ALARM MODAL -->
+<div id="alarm-modal">
+  <div class="am-header">
+    <span class="am-icon" id="am-icon">🚨</span>
+    <div class="am-head-text">
+      <div class="am-title" id="am-title">DANGER DETECTED</div>
+      <div class="am-subtitle" id="am-subtitle">SafeDrive.ai Alert System</div>
+    </div>
+    <span class="am-close" onclick="dismissAlarm()">✕</span>
+  </div>
+  <div class="am-body">
+    <div class="am-msg" id="am-msg">High risk detected. Please pull over safely.</div>
+    <div class="am-score-row">
+      <div class="am-score-big" id="am-score">0.0</div>
+      <div class="am-score-info">
+        <div class="am-score-lbl">Risk Score / 10</div>
+        <div class="am-score-bar-wrap"><div class="am-score-bar" id="am-bar" style="width:0%"></div></div>
+        <div class="am-level" id="am-level">HIGH RISK</div>
+      </div>
+    </div>
+    <div class="am-actions">
+      <button class="am-btn am-snooze" onclick="snoozeAlarm()">⏸ Snooze 60s</button>
+      <button class="am-btn am-ack" onclick="dismissAlarm()">✓ Acknowledged</button>
+    </div>
+  </div>
+  <div class="am-footer">
+    <span class="am-countdown" id="am-countdown"></span>
+    <div class="am-sound-row" onclick="toggleSound()">
+      <div class="am-sound-dot" id="am-sound-dot"></div>
+      <span class="am-sound-lbl" id="am-sound-lbl">Sound On</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="tb-logo">Safe<span>Drive</span>.ai<span class="tb-version">v3.0</span></div>
+    <div class="tb-divider"></div>
+    <div class="tb-pills">
+      <span class="pill" id="p-cam">📷 Camera OFF</span>
+      <span class="pill" id="p-mic">🎤 Mic OFF</span>
+      <span class="pill" id="p-eng" onclick="toggleEngine()">🔑 Engine ON</span>
+      <span class="pill on-red"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:4px;animation:dot-pulse 1s infinite"></span>LIVE</span>
+    </div>
+    <span id="risk-badge">✓ SAFE  0.0</span>
+    <div class="tb-divider"></div>
+    <span id="session-timer">00:00:00</span>
+    <div class="tb-right">
+      <span class="tb-user" id="tb-user">Driver</span>
+      <button class="tb-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid">
+
+    <!-- ── LEFT ── -->
+    <div class="left">
+      <div class="card">
+        <div class="card-h"><span class="ch-accent">◉</span> Detection Status</div>
+        <div class="status-grid">
+          <div class="status-row"><div class="dot dot-off" id="d-face"></div><span class="status-name">Face</span><span class="status-val" id="dv-face">--</span></div>
+          <div class="status-row"><div class="dot dot-off" id="d-eye"></div><span class="status-name">Eyes (EAR)</span><span class="status-val" id="dv-eye">--</span></div>
+          <div class="status-row"><div class="dot dot-off" id="d-yawn"></div><span class="status-name">Yawn (MAR)</span><span class="status-val" id="dv-yawn">--</span></div>
+          <div class="status-row"><div class="dot dot-off" id="d-emo"></div><span class="status-name">Emotion</span><span class="status-val" id="dv-emo">--</span></div>
+          <div class="status-row"><div class="dot dot-off" id="d-stress"></div><span class="status-name">Stress</span><span class="status-val" id="dv-stress">--</span></div>
+          <div class="status-row"><div class="dot dot-off" id="d-vis"></div><span class="status-name">Visibility</span><span class="status-val" id="dv-vis">--</span></div>
+          <div class="status-row"><div class="dot dot-off" id="d-child"></div><span class="status-name">Child Watch</span><span class="status-val" id="dv-child">--</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="ch-accent">◈</span> Driver Metrics</div>
+        <div class="metrics-grid">
+          <div class="metric-row"><span class="metric-lbl">EAR</span><span class="metric-val green" id="m-ear">--</span></div>
+          <div class="metric-row"><span class="metric-lbl">MAR</span><span class="metric-val" id="m-mar">--</span></div>
+          <div class="metric-row"><span class="metric-lbl">Blinks</span><span class="metric-val" id="m-blinks">0</span></div>
+          <div class="metric-row"><span class="metric-lbl">Brightness</span><span class="metric-val" id="m-bright">--</span></div>
+          <div class="metric-row"><span class="metric-lbl">FPS</span><span class="metric-val" id="m-fps">--</span></div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;min-height:0;overflow:hidden">
+        <div class="card-h"><span class="ch-accent">◇</span> Emotion Analysis</div>
+        <div class="emo-list">
+          <div class="emo-row"><span class="emo-name">Happy</span><div class="emo-bar-wrap"><div class="emo-bar" id="ef-happy" style="width:0%;background:#00e676"></div></div><span class="emo-pct" id="ep-happy">0%</span></div>
+          <div class="emo-row"><span class="emo-name">Sad</span><div class="emo-bar-wrap"><div class="emo-bar" id="ef-sad" style="width:0%;background:#3b82f6"></div></div><span class="emo-pct" id="ep-sad">0%</span></div>
+          <div class="emo-row"><span class="emo-name">Angry</span><div class="emo-bar-wrap"><div class="emo-bar" id="ef-angry" style="width:0%;background:#ff3b3b"></div></div><span class="emo-pct" id="ep-angry">0%</span></div>
+          <div class="emo-row"><span class="emo-name">Surpr.</span><div class="emo-bar-wrap"><div class="emo-bar" id="ef-surprised" style="width:0%;background:#00e5ff"></div></div><span class="emo-pct" id="ep-surprised">0%</span></div>
+          <div class="emo-row"><span class="emo-name">Fear</span><div class="emo-bar-wrap"><div class="emo-bar" id="ef-fear" style="width:0%;background:#d500f9"></div></div><span class="emo-pct" id="ep-fear">0%</span></div>
+          <div class="emo-row"><span class="emo-name">Neutral</span><div class="emo-bar-wrap"><div class="emo-bar" id="ef-neutral" style="width:0%;background:#7a9bb8"></div></div><span class="emo-pct" id="ep-neutral">0%</span></div>
+          <div style="padding:6px 0 2px;text-align:center;font-size:0.7rem;color:var(--muted);letter-spacing:1px">Dominant: <span id="dom-emo" style="color:var(--text);font-weight:600">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CENTER ── -->
+    <div class="center">
+      <div class="cam-wrap" style="flex:1">
+        <div class="cam-corner-bl"></div><div class="cam-corner-br"></div>
+        <video id="vid" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+        <canvas id="emo-canvas"></canvas>
+        <div class="cam-alert drowsy"  id="banner-drowsy">😴 DROWSY — TAKE A BREAK</div>
+        <div class="cam-alert yawn"    id="banner-yawn">🥱 YAWNING — FATIGUE WARNING</div>
+        <div class="cam-alert child"   id="banner-child">🆘 CHILD IN VEHICLE!</div>
+        <div class="cam-alert high"    id="banner-high">🚨 HIGH DANGER — PULL OVER</div>
+        <div class="cam-status">
+          <div class="cs-item"><span class="cs-label">EAR</span><span class="cs-val" id="cs-ear">--</span></div>
+          <div class="cs-item"><span class="cs-label">MAR</span><span class="cs-val" id="cs-mar">--</span></div>
+          <div class="cs-item"><span class="cs-label">Vis</span><span class="cs-val" id="cs-vis">--</span></div>
+          <div class="cs-item"><span class="cs-label">Risk</span><span class="cs-val" id="cs-risk">--</span></div>
+          <div class="cs-item"><span class="cs-label">Emo</span><span class="cs-val" id="cs-emo">--</span></div>
+          <div class="cs-item" style="margin-left:auto"><span class="cs-label">Engine</span><span class="cs-val" id="cs-eng">ON</span></div>
+        </div>
+      </div>
+      <div class="cam-controls">
+        <button class="btn btn-start" onclick="startAll()">▶ Start</button>
+        <button class="btn btn-stop"  onclick="stopAll()">⏹ Stop</button>
+        <button class="btn btn-mic"   onclick="startMic()">🎤 Mic</button>
+        <button class="btn btn-eng"   onclick="toggleEngine()">🔑 Engine</button>
+        <button class="btn btn-test"  onclick="testAlarm()">🔔 Test Alarm</button>
+        <span id="status-msg">Click Start to begin monitoring</span>
+      </div>
+      <div class="card log-card">
+        <div class="card-h"><span class="ch-accent">▸</span> System Log <span style="font-size:0.62rem;cursor:pointer;color:var(--muted)" onclick="clearLogs()">clear</span></div>
+        <div class="log-body" id="log-body"></div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT ── -->
+    <div class="right">
+      <!-- Risk gauge -->
+      <div class="card">
+        <div class="card-h"><span class="ch-accent">▲</span> Risk Score</div>
+        <div class="risk-block">
+          <div class="risk-number-row">
+            <div class="risk-num" id="rnum" style="color:var(--green)">0.0</div>
+            <div class="risk-denom">/ 10</div>
+          </div>
+          <div class="risk-label" id="rlbl" style="color:var(--green)">LOW RISK</div>
+          <div class="risk-gauge-wrap">
+            <div class="risk-gauge-track" id="rgauge" style="width:0%;background:var(--green)"></div>
+          </div>
+        </div>
+        <div class="sub-grid">
+          <div class="sub-row"><span class="sub-lbl">Drowsiness</span><div class="sub-bar-wrap"><div class="sub-bar" id="sb-d" style="background:#3b82f6"></div></div><span class="sub-val" id="sv-d">0.0</span></div>
+          <div class="sub-row"><span class="sub-lbl">Emotion</span><div class="sub-bar-wrap"><div class="sub-bar" id="sb-e" style="background:#d500f9"></div></div><span class="sub-val" id="sv-e">0.0</span></div>
+          <div class="sub-row"><span class="sub-lbl">Stress</span><div class="sub-bar-wrap"><div class="sub-bar" id="sb-s" style="background:#ff6b2b"></div></div><span class="sub-val" id="sv-s">0.0</span></div>
+          <div class="sub-row"><span class="sub-lbl">Visibility</span><div class="sub-bar-wrap"><div class="sub-bar" id="sb-v" style="background:#00e5ff"></div></div><span class="sub-val" id="sv-v">0.0</span></div>
+          <div class="sub-row"><span class="sub-lbl">Child</span><div class="sub-bar-wrap"><div class="sub-bar" id="sb-c" style="background:var(--red)"></div></div><span class="sub-val" id="sv-c">0.0</span></div>
+        </div>
+      </div>
+      <!-- Risk chart -->
+      <div class="card">
+        <div class="card-h"><span class="ch-accent">◈</span> Risk History</div>
+        <div class="chart-wrap"><canvas class="mc-canvas" id="risk-chart" height="48"></canvas></div>
+      </div>
+      <!-- Voice / stress -->
+      <div class="card">
+        <div class="card-h"><span class="ch-accent">♫</span> Voice Analysis</div>
+        <div class="waveform-wrap">
+          <div class="waveform" id="waveform">
+            <!-- bars injected by JS -->
+          </div>
+        </div>
+        <div class="stress-row">
+          <span class="stress-badge" id="stress-badge">Normal</span>
+          <span class="mic-energy" id="mic-energy">-- E</span>
+        </div>
+      </div>
+      <!-- Session stats -->
+      <div class="card">
+        <div class="card-h"><span class="ch-accent">▣</span> Session Stats</div>
+        <div class="session-grid">
+          <div class="sstat-box"><div class="sstat-val" id="ss-time">00:00</div><div class="sstat-lbl">Drive Time</div></div>
+          <div class="sstat-box"><div class="sstat-val" id="ss-alerts">0</div><div class="sstat-lbl">Alerts</div></div>
+          <div class="sstat-box"><div class="sstat-val" id="ss-max">0.0</div><div class="sstat-lbl">Peak Risk</div></div>
+          <div class="sstat-box"><div class="sstat-val" id="ss-blinks">0</div><div class="sstat-lbl">Blinks</div></div>
+        </div>
+      </div>
+      <!-- Alerts list -->
+      <div class="card">
+        <div class="card-h">
+          <span><span class="ch-accent">⚡</span> Recent Alerts</span>
+          <span style="font-size:0.62rem;cursor:pointer;color:var(--muted)" onclick="clearAlerts()">clear</span>
+        </div>
+        <div class="alert-list" id="alert-list">
+          <div style="padding:10px 12px;font-size:0.72rem;color:var(--muted)">No alerts yet</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   SAFEDRIVE.AI v3.0 — COMPLETE RUNTIME
+   All detection, alarm, UI in one file
+═══════════════════════════════════════════════════════════ */
+
+// ── State ────────────────────────────────────────────────────
+const S = {
+  risk:0, dScore:0, eScore:0, sScore:0, vScore:0, cScore:0,
+  ear:0, mar:0, blinks:0, drowsy:false, yawning:false,
+  faceDetected:false, visibility:"Clear", brightness:0,
+  childAlert:false, engineOn:true,
+  emotions:{happy:0,sad:0,angry:0,surprised:0,neutral:1,fear:0},
+  domEmotion:"Neutral",
+  stressLevel:"Normal", micEnergy:0,
+};
+let running=false, micRunning=false, camera=null, faceMesh=null;
+let engineOn=true;
+const scoreHistory=[], logs=[], alerts=[];
+let sessionStart=Date.now(), sessionAlerts=0, sessionMaxRisk=0;
+let fpsCounter=0, fpsLast=Date.now(), fps=0;
+
+// ── Waveform bars ────────────────────────────────────────────
+const wfEl = document.getElementById("waveform");
+for(let i=0;i<28;i++){const b=document.createElement("div");b.className="wb";wfEl.appendChild(b);}
+
+// ── Login / Auth ─────────────────────────────────────────────
+let currentUser = null;
+
+function switchTab(t) {
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active", (i===0&&t==="login")||(i===1&&t==="signup")));
+  document.getElementById("form-login").classList.toggle("visible", t==="login");
+  document.getElementById("form-signup").classList.toggle("visible", t==="signup");
+}
+
+async function doLogin() {
+  const email=document.getElementById("l-email").value.trim();
+  const pw   =document.getElementById("l-pw").value;
+  const err  =document.getElementById("l-err");
+  err.textContent="";
+  if(!email||!pw){err.textContent="Email and password required.";return;}
+
+  // Try API first, fall back to local demo accounts
+  const LOCAL_USERS = {
+    "demo@test.com":       {pw:"demo1234",name:"Demo Driver"},
+    "admin@safedrive.ai":  {pw:"admin123",name:"Admin User"},
+    "test@driver.com":     {pw:"test1234",name:"Test Driver"},
+  };
+  const u = LOCAL_USERS[email.toLowerCase()];
+  if(u && u.pw===pw) { launchApp(u.name); return; }
+
+  try {
+    const r = await fetch("/api/login",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pw})});
+    const d = await r.json();
+    if(d.ok) { launchApp(d.name); }
+    else { err.textContent = d.error || "Login failed."; }
+  } catch(e) {
+    if(u===undefined) err.textContent="Invalid credentials.";
+    else err.textContent="Server offline — use demo credentials.";
+  }
+}
+
+async function doSignup() {
+  const name =document.getElementById("s-name").value.trim();
+  const email=document.getElementById("s-email").value.trim();
+  const pw   =document.getElementById("s-pw").value;
+  const err  =document.getElementById("s-err");
+  err.textContent="";
+  if(!name||!email||!pw){err.textContent="All fields required.";return;}
+  if(pw.length<8){err.textContent="Password must be at least 8 characters.";return;}
+  try {
+    const r=await fetch("/api/register",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,password:pw})});
+    const d=await r.json();
+    if(d.ok){launchApp(d.name);}
+    else{err.textContent=d.error||"Registration failed.";}
+  } catch(e){ launchApp(name); } // offline fallback
+}
+
+function doGuest() { launchApp("Guest Driver"); }
+
+function launchApp(name) {
+  currentUser=name;
+  document.getElementById("tb-user").textContent=name;
+  document.getElementById("login-screen").style.display="none";
+  document.getElementById("app").classList.add("visible");
+  sessionStart=Date.now();
+  startSessionTimer();
+  addLog("Welcome, "+name+" — SafeDrive.ai v3.0 ready","g");
+  addLog("Click ▶ Start to begin monitoring","");
+  initRiskChart();
+}
+
+async function doLogout() {
+  try{ await fetch("/api/logout",{method:"POST",credentials:"include"}); }catch(e){}
+  stopAll();
+  document.getElementById("app").classList.remove("visible");
+  document.getElementById("login-screen").style.display="flex";
+  document.getElementById("l-email").value="";
+  document.getElementById("l-pw").value="";
+}
+
+// ── Session timer ────────────────────────────────────────────
+function startSessionTimer() {
+  setInterval(()=>{
+    const s=Math.floor((Date.now()-sessionStart)/1000);
+    const h=Math.floor(s/3600).toString().padStart(2,"0");
+    const m=Math.floor((s%3600)/60).toString().padStart(2,"0");
+    const sec=(s%60).toString().padStart(2,"0");
+    document.getElementById("session-timer").textContent=h+":"+m+":"+sec;
+    document.getElementById("ss-time").textContent=m+":"+sec;
+  },1000);
+}
+
+// ── MediaPipe FaceMesh ───────────────────────────────────────
+const LEFT_EYE  =[362,385,387,263,373,380];
+const RIGHT_EYE =[33,160,158,133,153,144];
+const MOUTH     =[61,291,0,17,78,308,82,312];
+const FACE_OVAL =[10,338,297,332,284,251,389,356,454,323,361,288,397,365,
+                  379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+const EAR_T=0.25, MAR_T=0.60, EAR_F=18, MAR_F=12;
+let earFrames=0, marFrames=0, blinks=0;
+let prevGray=null;
+
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function ear(lm,idx){const p=idx.map(i=>lm[i]);const A=dist(p[1],p[5]),B=dist(p[2],p[4]),C=dist(p[0],p[3]);return C>0?(A+B)/(2*C):0;}
+function mar(lm){const p=MOUTH.map(i=>lm[i]);const A=dist(p[2],p[3]),B=dist(p[4],p[5]),C=dist(p[6],p[7]),D=dist(p[0],p[1]);return D>0?(A+B+C)/(2*D):0;}
+
+// Emotion geometry
+const ALPHA_EMO=0.25;
+let smoothEmo={happy:0,sad:0,angry:0,surprised:0,fear:0,neutral:0};
+function clamp01(v){return Math.max(0,Math.min(1,v));}
+function estimateEmotion(lm){
+  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const lc=lm[61],rc=lm[291],t=lm[13],b=lm[14];
+  const lb=lm[70],rb=lm[300],li=lm[107],ri=lm[336];
+  const le=lm[159],re=lm[386],le2=lm[145],re2=lm[374];
+  const el=lm[33],er=lm[263];
+  const lip=(t.y+b.y)/2,corY=(lc.y+rc.y)/2,eyeD=d(el,er);
+  const smile=clamp01((lip-corY)*80+0.5);
+  const frown=clamp01((corY-lip)*80+0.5);
+  const bLift=clamp01(((le.y+re.y)/2-(lb.y+rb.y)/2)*35);
+  const furr=clamp01(1-(d(li,ri)/(eyeD+1e-6))*1.6);
+  const mh=Math.abs(t.y-b.y),mw=d(lm[61],lm[291]);
+  const mAR=clamp01(mh/(mw+1e-6));
+  const leh=Math.abs(le.y-le2.y)/(d(el,lm[133])+1e-6);
+  const reh=Math.abs(re.y-re2.y)/(d(lm[362],er)+1e-6);
+  const wide=clamp01(((leh+reh)/2)*8-1.5);
+  let raw={happy:smile*(1-frown)*0.9,sad:frown*(1-smile)*0.7,angry:frown*furr*0.85,
+           surprised:bLift*mAR*wide*0.9,fear:bLift*(1-smile)*mAR*0.75,neutral:0};
+  const s=Object.values(raw).reduce((a,b)=>a+b,0)||1e-6;
+  raw.neutral=clamp01(1-s*0.85);
+  const t2=Object.values(raw).reduce((a,b)=>a+b,0)||1;
+  const normed={};for(const k in raw)normed[k]=raw[k]/t2;
+  for(const k in smoothEmo)smoothEmo[k]=ALPHA_EMO*normed[k]+(1-ALPHA_EMO)*smoothEmo[k];
+  const sum=Object.values(smoothEmo).reduce((a,b)=>a+b,0)||1;
+  const out={};for(const k in smoothEmo)out[k]=smoothEmo[k]/sum;
+  return out;
+}
+
+function onFaceResults(results) {
+  fpsCounter++;
+  const now=Date.now();
+  if(now-fpsLast>=1000){fps=fpsCounter;fpsCounter=0;fpsLast=now;}
+
+  const vid=document.getElementById("vid");
+  const cv=document.getElementById("overlay");
+  cv.width=vid.videoWidth||640; cv.height=vid.videoHeight||360;
+  const ctx=cv.getContext("2d");
+  ctx.clearRect(0,0,cv.width,cv.height);
+
+  if(!results.multiFaceLandmarks||!results.multiFaceLandmarks.length){
+    S.faceDetected=false; updateUI(); return;
+  }
+  S.faceDetected=true;
+  const lm=results.multiFaceLandmarks[0];
+  const w=cv.width, h=cv.height;
+  const pt=i=>[lm[i].x*w,lm[i].y*h];
+
+  // EAR
+  const earL=ear(lm,LEFT_EYE), earR=ear(lm,RIGHT_EYE);
+  const earAvg=(earL+earR)/2;
+  S.ear=+earAvg.toFixed(3);
+  if(earAvg<EAR_T){earFrames++;} else{if(earFrames>=2)blinks++;earFrames=0;}
+  S.drowsy=earFrames>=EAR_F; S.blinks=blinks;
+
+  // MAR
+  const marVal=mar(lm); S.mar=+marVal.toFixed(3);
+  if(marVal>MAR_T){marFrames++;} else{marFrames=0;}
+  S.yawning=marFrames>=MAR_F;
+
+  // Emotion
+  const emo=estimateEmotion(lm);
+  S.emotions=emo;
+  S.domEmotion=Object.keys(emo).reduce((a,b)=>emo[a]>emo[b]?a:b,"neutral");
+  S.eScore=+Math.min(10,(emo.angry*9+emo.fear*7+emo.sad*4)*10).toFixed(1);
+
+  // Draw overlays
+  const eyeCol=S.drowsy?"#ff3b3b":"#00e676";
+  const mCol  =S.yawning?"#ff6b2b":"#00e5ff";
+  ctx.strokeStyle=eyeCol; ctx.lineWidth=1.5;
+  [...LEFT_EYE,...RIGHT_EYE].forEach(i=>{ctx.beginPath();ctx.arc(...pt(i),2,0,Math.PI*2);ctx.fillStyle=eyeCol;ctx.fill();});
+  MOUTH.forEach(i=>{ctx.beginPath();ctx.arc(...pt(i),2,0,Math.PI*2);ctx.fillStyle=mCol;ctx.fill();});
+  ctx.strokeStyle="rgba(0,229,255,0.3)"; ctx.lineWidth=1;
+  ctx.beginPath();
+  FACE_OVAL.forEach((i,n)=>{const[x,y]=pt(i);n===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.closePath(); ctx.stroke();
+
+  // Visibility (pixel analysis)
+  analyzeVisibility(vid);
+
+  // Risk score
+  const dS = S.drowsy?8:Math.max(0,(EAR_T-earAvg)*22);
+  S.dScore=+Math.min(10,dS+(S.yawning?3:0)).toFixed(1);
+  const raw=S.dScore*0.35+S.eScore*0.25+S.sScore*0.2+S.vScore*0.2+S.cScore*0.2;
+  scoreHistory.push(Math.min(10,raw));
+  if(scoreHistory.length>30)scoreHistory.shift();
+  S.risk=+(scoreHistory.reduce((a,b)=>a+b,0)/scoreHistory.length).toFixed(2);
+  if(S.risk>sessionMaxRisk){sessionMaxRisk=S.risk;document.getElementById("ss-max").textContent=S.risk.toFixed(1);}
+
+  updateUI();
+  pushRiskChart(S.risk);
+}
+
+// ── Visibility ────────────────────────────────────────────────
+let visCanvas=null,visCtx=null;
+function analyzeVisibility(vid){
+  if(!visCanvas){visCanvas=document.createElement("canvas");visCtx=visCanvas.getContext("2d");}
+  visCanvas.width=80;visCanvas.height=45;
+  visCtx.drawImage(vid,0,0,80,45);
+  const d=visCtx.getImageData(0,0,80,45).data;
+  let bright=0,vals=[];
+  for(let i=0;i<d.length;i+=4){const g=(d[i]+d[i+1]+d[i+2])/3;bright+=g;vals.push(g);}
+  bright/=(d.length/4);
+  const mean=bright;
+  const std=Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/vals.length);
+  S.brightness=Math.round(bright);
+  if(bright<40){S.visibility="Low-Light";S.vScore=4;}
+  else if(std<25){S.visibility="Fog";S.vScore=5;}
+  else{S.visibility="Clear";S.vScore=0;}
+
+  // Child detection (frame diff when engine off)
+  if(!engineOn&&prevGray){
+    let diff=0;
+    const g=vals;
+    for(let i=0;i<g.length;i++)diff+=Math.abs(g[i]-(prevGray[i]||0));
+    diff/=g.length;
+    S.childAlert=diff>8;
+    S.cScore=S.childAlert?9:0;
+    if(S.childAlert){addAlert("👶 Motion in vehicle!","danger");triggerAlarm("child",10);}
+  } else if(engineOn){S.childAlert=false;S.cScore=0;}
+  prevGray=[...vals];
+}
+
+// ── Voice / Stress ────────────────────────────────────────────
+let audioCtx=null,analyser=null,micStream=null;
+const stressHistory=[];
+let prevDrowsy=false, prevYawning=false, prevChild=false;
+let highRiskFrames=0;
+
+function startMic(){
+  if(micRunning)return;
+  navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(stream=>{
+    micStream=stream;
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    analyser=audioCtx.createAnalyser();
+    analyser.fftSize=512;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    micRunning=true;
+    document.getElementById("p-mic").textContent="🎤 Mic ON";
+    document.getElementById("p-mic").className="pill on-green";
+    addLog("Microphone enabled — voice stress analysis active","g");
+    micLoop();
+  }).catch(()=>addLog("Mic permission denied","d"));
+}
+
+function micLoop(){
+  if(!micRunning)return;
+  const buf=new Float32Array(analyser.frequencyBinCount);
+  const freq=new Uint8Array(analyser.frequencyBinCount);
+  analyser.getFloatTimeDomainData(buf);
+  analyser.getByteFrequencyData(freq);
+  let rms=0; buf.forEach(v=>rms+=v*v);
+  rms=Math.sqrt(rms/buf.length);
+  let wSum=0,dSum=0;
+  freq.forEach((v,i)=>{wSum+=v*i;dSum+=v;});
+  const centroid=dSum>0?wSum/dSum:0;
+  let zcr=0; for(let i=1;i<buf.length;i++)if(buf[i]>=0!==buf[i-1]>=0)zcr++;
+  zcr/=buf.length;
+  S.micEnergy=+(rms*200).toFixed(1);
+  stressHistory.push({rms,centroid,zcr});
+  if(stressHistory.length>30)stressHistory.shift();
+  const aRms=stressHistory.reduce((a,b)=>a+b.rms,0)/stressHistory.length;
+  const aCen=stressHistory.reduce((a,b)=>a+b.centroid,0)/stressHistory.length;
+  const aZcr=stressHistory.reduce((a,b)=>a+b.zcr,0)/stressHistory.length;
+  if(aRms>0.12&&aCen>60&&aZcr>0.15){S.stressLevel="High Stress";S.sScore=8;addAlert("🎤 High Stress","danger");triggerAlarm("stress",S.risk);}
+  else if(aRms>0.05&&(aCen>40||aZcr>0.08)){S.stressLevel="Mild Stress";S.sScore=4;}
+  else{S.stressLevel="Normal";S.sScore=0;}
+  // Waveform
+  const bars=document.querySelectorAll(".wb");
+  const step=Math.floor(freq.length/bars.length);
+  bars.forEach((b,i)=>{
+    const h=Math.max(3,(freq[i*step]/255)*28);
+    b.style.height=h+"px";
+    b.style.background=S.stressLevel==="High Stress"?"#ff3b3b":S.stressLevel==="Mild Stress"?"#f5a623":"#d500f9";
+  });
+  setTimeout(micLoop,100);
+}
+
+// ── Camera ───────────────────────────────────────────────────
+function startAll(){
+  if(running)return;
+  document.getElementById("status-msg").textContent="Starting...";
+  navigator.mediaDevices.getUserMedia({video:{width:640,height:360,facingMode:"user"},audio:false})
+  .then(stream=>{
+    const vid=document.getElementById("vid");
+    vid.srcObject=stream; vid.play();
+    running=true;
+    if(!faceMesh){
+      faceMesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
+      faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+      faceMesh.onResults(onFaceResults);
+    }
+    camera=new Camera(vid,{onFrame:async()=>{await faceMesh.send({image:vid});},width:640,height:360});
+    camera.start();
+    document.getElementById("p-cam").textContent="📷 Camera ON";
+    document.getElementById("p-cam").className="pill on-green";
+    document.getElementById("status-msg").textContent="Monitoring active";
+    addLog("Camera started","g");
+    addLog("Drowsiness · Emotion · Visibility detection running","g");
+    startMic();
+    setInterval(()=>{document.getElementById("m-fps").textContent=fps;},1000);
+  }).catch(e=>{
+    document.getElementById("status-msg").textContent="Camera denied";
+    addLog("Camera error: "+e.message,"d");
+  });
+}
+
+function stopAll(){
+  running=false;
+  if(camera)camera.stop();
+  const vid=document.getElementById("vid");
+  if(vid.srcObject)vid.srcObject.getTracks().forEach(t=>t.stop());
+  if(micStream)micStream.getTracks().forEach(t=>t.stop());
+  micRunning=false;
+  document.getElementById("p-cam").textContent="📷 Camera OFF";
+  document.getElementById("p-cam").className="pill";
+  document.getElementById("p-mic").textContent="🎤 Mic OFF";
+  document.getElementById("p-mic").className="pill";
+  document.getElementById("status-msg").textContent="Stopped";
+  addLog("Monitoring stopped","w");
+}
+
+function toggleEngine(){
+  engineOn=!engineOn;S.engineOn=engineOn;
+  document.getElementById("p-eng").textContent="🔑 Engine "+(engineOn?"ON":"OFF");
+  document.getElementById("p-eng").className="pill "+(engineOn?"on-green":"on-yellow");
+  document.getElementById("cs-eng").textContent=engineOn?"ON":"OFF";
+  if(!engineOn){addAlert("🔑 Engine off — child watch active","warn");}
+  addLog("Engine "+(engineOn?"ON — child detection paused":"OFF — child detection active"),engineOn?"g":"w");
+}
+
+// ── Update UI ────────────────────────────────────────────────
+let uiTick=0;
+function updateUI(){
+  uiTick++;
+  const r=S.risk;
+  const col=r>=6?"var(--red)":r>=3?"var(--yellow)":"var(--green)";
+  const lbl=r>=6?"HIGH RISK":r>=3?"MEDIUM RISK":"LOW RISK";
+
+  // Risk display
+  document.getElementById("rnum").textContent=r.toFixed(1);
+  document.getElementById("rnum").style.color=col;
+  document.getElementById("rlbl").textContent=lbl;
+  document.getElementById("rlbl").style.color=col;
+  document.getElementById("rgauge").style.width=Math.min(100,r*10)+"%";
+  document.getElementById("rgauge").style.background=col;
+
+  // Risk badge
+  const b=document.getElementById("risk-badge");
+  const icon=r>=6?"⚠":r>=3?"•":"✓";
+  b.textContent=`${icon} ${lbl}  ${r.toFixed(1)}`;
+  b.className=r>=6?"high":r>=3?"med":"";
+
+  // Sub bars
+  const setBar=(id,val,vid)=>{
+    document.getElementById(id).style.width=Math.min(100,(val/10)*100)+"%";
+    document.getElementById(vid).textContent=val.toFixed(1);
+  };
+  setBar("sb-d",S.dScore,"sv-d");setBar("sb-e",S.eScore,"sv-e");
+  setBar("sb-s",S.sScore,"sv-s");setBar("sb-v",S.vScore,"sv-v");
+  setBar("sb-c",S.cScore,"sv-c");
+
+  // Dots
+  const setDot=(id,cls)=>document.getElementById(id).className="dot dot-"+cls;
+  setDot("d-face",S.faceDetected?"ok":"off");
+  setDot("d-eye",S.drowsy?"danger":S.faceDetected?"ok":"off");
+  setDot("d-yawn",S.yawning?"warn":S.faceDetected?"ok":"off");
+  setDot("d-emo",S.faceDetected?"ok":"off");
+  setDot("d-stress",S.stressLevel==="High Stress"?"danger":S.stressLevel==="Mild Stress"?"warn":micRunning?"ok":"off");
+  setDot("d-vis",S.visibility!=="Clear"?"warn":"ok");
+  setDot("d-child",S.childAlert?"danger":engineOn?"ok":"warn");
+
+  // Status values
+  document.getElementById("dv-face").textContent=S.faceDetected?"YES":"NO";
+  document.getElementById("dv-eye").textContent=S.faceDetected?(S.drowsy?"DROWSY":"EAR "+S.ear):"--";
+  document.getElementById("dv-yawn").textContent=S.faceDetected?(S.yawning?"YAWNING":"MAR "+S.mar):"--";
+  document.getElementById("dv-emo").textContent=S.faceDetected?S.domEmotion:"--";
+  document.getElementById("dv-stress").textContent=micRunning?S.stressLevel:"--";
+  document.getElementById("dv-vis").textContent=S.visibility;
+  document.getElementById("dv-child").textContent=S.childAlert?"ALERT":engineOn?"SAFE":"WATCH";
+
+  // Metrics
+  const earEl=document.getElementById("m-ear");
+  earEl.textContent=S.faceDetected?S.ear:"--";
+  earEl.className="metric-val "+(S.ear<EAR_T&&S.faceDetected?"red":"green");
+  document.getElementById("m-mar").textContent=S.faceDetected?S.mar:"--";
+  document.getElementById("m-blinks").textContent=blinks;
+  document.getElementById("m-bright").textContent=S.brightness||"--";
+
+  // Cam status strip
+  document.getElementById("cs-ear").textContent=S.faceDetected?S.ear:"--";
+  document.getElementById("cs-mar").textContent=S.faceDetected?S.mar:"--";
+  document.getElementById("cs-vis").textContent=S.visibility;
+  document.getElementById("cs-risk").textContent=r.toFixed(1);
+  document.getElementById("cs-emo").textContent=S.domEmotion;
+
+  // Emotions
+  const emos=["happy","sad","angry","surprised","neutral","fear"];
+  emos.forEach(k=>{
+    const p=Math.round((S.emotions[k]||0)*100);
+    document.getElementById("ef-"+k).style.width=p+"%";
+    document.getElementById("ep-"+k).textContent=p+"%";
+  });
+  document.getElementById("dom-emo").textContent=S.domEmotion;
+
+  // Stress
+  const sb=document.getElementById("stress-badge");
+  sb.textContent=micRunning?S.stressLevel:"Mic Off";
+  sb.style.color=S.stressLevel==="High Stress"?"var(--red)":S.stressLevel==="Mild Stress"?"var(--yellow)":"var(--green)";
+  document.getElementById("mic-energy").textContent=micRunning?S.micEnergy+" E":"-- E";
+
+  // Banners on video
+  document.getElementById("banner-high").style.display  =(r>=7&&S.faceDetected)?"block":"none";
+  document.getElementById("banner-drowsy").style.display=(S.drowsy&&r<7)?"block":"none";
+  document.getElementById("banner-yawn").style.display  =(S.yawning&&!S.drowsy&&r<7)?"block":"none";
+  document.getElementById("banner-child").style.display =S.childAlert?"block":"none";
+
+  // Session stats
+  document.getElementById("ss-alerts").textContent=sessionAlerts;
+  document.getElementById("ss-blinks").textContent=blinks;
+
+  // Trigger alarms
+  checkAlarms();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ALARM ENGINE
+// ══════════════════════════════════════════════════════════════
+let alarmAudioCtx=null;
+let soundEnabled=true;
+let alarmActive=false, snoozed=false;
+let alarmShakeInt=null, snoozeTimer=null;
+let alarmThrottles={};
+
+const ALARMS={
+  high:    {icon:"🚨",title:"HIGH DANGER — PULL OVER",sub:"Immediate action required",msg:"Severe risk detected. Please stop the vehicle in a safe location immediately.",level:"CRITICAL DANGER",sound:"emergency",throttle:7000},
+  drowsy:  {icon:"😴",title:"DROWSINESS DETECTED",sub:"Driver fatigue alert",msg:"Your eyes are closing. You are dangerously drowsy. Pull over and rest immediately.",level:"HIGH RISK",sound:"alert",throttle:5000},
+  yawn:    {icon:"🥱",title:"YAWNING DETECTED",sub:"Fatigue warning",msg:"Repeated yawning indicates driver fatigue. Consider taking a rest break soon.",level:"MEDIUM RISK",sound:"beep",throttle:12000},
+  child:   {icon:"🆘",title:"CHILD IN VEHICLE",sub:"Emergency — engine OFF",msg:"Child movement detected with engine OFF! Check your vehicle immediately!",level:"CRITICAL",sound:"emergency",throttle:3000},
+  stress:  {icon:"😰",title:"HIGH STRESS LEVEL",sub:"Voice stress analysis",msg:"High stress detected in your voice. This affects driving. Consider pulling over.",level:"HIGH RISK",sound:"alert",throttle:10000},
+  vis:     {icon:"🌫️",title:"POOR VISIBILITY",sub:"Environmental hazard",msg:"Dangerous visibility conditions detected. Reduce speed and increase following distance.",level:"WARNING",sound:"beep",throttle:15000},
+};
+
+function initAudio(){
+  if(!alarmAudioCtx)alarmAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(alarmAudioCtx.state==="suspended")alarmAudioCtx.resume();
+  return alarmAudioCtx;
+}
+
+function playSound(type){
+  if(!soundEnabled)return;
+  try{
+    const ctx=initAudio();
+    const patterns={
+      emergency:[
+        {f:1047,d:0.1,g:0.08},{f:784,d:0.1,g:0.04},{f:1047,d:0.1,g:0.08},{f:784,d:0.1,g:0.04},
+        {f:1047,d:0.1,g:0.08},{f:784,d:0.1,g:0.04},{f:1047,d:0.2,g:0.3},
+      ],
+      alert:[
+        {f:880,d:0.15,g:0.1},{f:660,d:0.15,g:0.1},{f:880,d:0.3,g:0.35},
+      ],
+      beep:[
+        {f:523,d:0.12,g:0.1},{f:523,d:0.12,g:0.25},
+      ],
+    };
+    const pat=patterns[type]||patterns.beep;
+    let t=ctx.currentTime+0.05;
+    function play(repeat){
+      pat.forEach(({f,d,g})=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.type=type==="emergency"?"square":"sine";
+        osc.frequency.setValueAtTime(f,t);
+        gain.gain.setValueAtTime(0,t);
+        gain.gain.linearRampToValueAtTime(0.4,t+0.01);
+        gain.gain.linearRampToValueAtTime(0,t+d);
+        osc.connect(gain);gain.connect(ctx.destination);
+        osc.start(t);osc.stop(t+d+0.01);
+        t+=d+g;
+      });
+      if(repeat>0){
+        const total=pat.reduce((s,p)=>s+p.d+p.g,0);
+        setTimeout(()=>play(repeat-1),(total*1000)+150);
+      }
+    }
+    play(type==="emergency"?3:type==="alert"?2:1);
+  }catch(e){console.warn("Audio:",e);}
+}
+
+function triggerAlarm(key,score){
+  if(snoozed)return;
+  const cfg=ALARMS[key]; if(!cfg)return;
+  const now=Date.now();
+  if(alarmThrottles[key]&&now-alarmThrottles[key]<cfg.throttle)return;
+  alarmThrottles[key]=now;
+  sessionAlerts++;
+
+  // Populate modal
+  document.getElementById("am-icon").textContent    =cfg.icon;
+  document.getElementById("am-title").textContent   =cfg.title;
+  document.getElementById("am-subtitle").textContent=cfg.sub;
+  document.getElementById("am-msg").textContent     =cfg.msg;
+  document.getElementById("am-score").textContent   =score.toFixed(1);
+  document.getElementById("am-bar").style.width     =Math.min(100,score*10)+"%";
+  document.getElementById("am-level").textContent   =cfg.level;
+
+  // Show modal
+  const modal=document.getElementById("alarm-modal");
+  modal.style.display="block";
+  modal.classList.remove("shake");
+  void modal.offsetWidth;
+  modal.classList.add("shake");
+
+  // Danger glow + bar for high risk
+  if(score>=6||key==="child"){
+    document.getElementById("danger-glow").style.display="block";
+    document.getElementById("danger-bar").style.display="block";
+  }
+
+  playSound(cfg.sound);
+  alarmActive=true;
+
+  // Repeat alarm
+  if(alarmShakeInt)clearInterval(alarmShakeInt);
+  alarmShakeInt=setInterval(()=>{
+    if(alarmActive&&!snoozed){
+      playSound(cfg.sound);
+      const m=document.getElementById("alarm-modal");
+      m.classList.remove("shake");void m.offsetWidth;m.classList.add("shake");
+    }else clearInterval(alarmShakeInt);
+  },9000);
+
+  addAlert(cfg.icon+" "+cfg.title,score>=6?"danger":"warn");
+}
+
+function dismissAlarm(){
+  document.getElementById("alarm-modal").style.display="none";
+  document.getElementById("danger-glow").style.display="none";
+  document.getElementById("danger-bar").style.display="none";
+  alarmActive=false;
+  if(alarmShakeInt)clearInterval(alarmShakeInt);
+}
+
+function snoozeAlarm(){
+  snoozed=true;
+  dismissAlarm();
+  addLog("⏸ Alarm snoozed 60 seconds","w");
+  let remain=60;
+  const bar=document.getElementById("snooze-bar");
+  bar.style.display="block";
+  bar.style.width="100%";
+  const countdown=document.getElementById("am-countdown");
+  const tick=setInterval(()=>{
+    remain--;
+    bar.style.width=(remain/60*100)+"%";
+    if(remain<=0){
+      clearInterval(tick);
+      snoozed=false;
+      bar.style.display="none";
+      addLog("🔔 Alarm snooze ended","w");
+    }
+  },1000);
+}
+
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  document.getElementById("am-sound-dot").className="am-sound-dot"+(soundEnabled?"":" off");
+  document.getElementById("am-sound-lbl").textContent=soundEnabled?"Sound On":"Sound Off";
+}
+
+// Auto-dismiss when risk drops
+function checkAlarms(){
+  if(S.drowsy&&!prevDrowsy)triggerAlarm("drowsy",S.risk);
+  prevDrowsy=S.drowsy;
+  if(S.yawning&&!prevYawning)triggerAlarm("yawn",S.risk);
+  prevYawning=S.yawning;
+  if(S.childAlert&&!prevChild)triggerAlarm("child",10);
+  prevChild=S.childAlert;
+  if(S.risk>=7){highRiskFrames++;if(highRiskFrames>=5){triggerAlarm("high",S.risk);highRiskFrames=0;}}
+  else{highRiskFrames=0;}
+  if(S.risk<2.5&&alarmActive&&!S.drowsy&&!S.childAlert)dismissAlarm();
+  if(S.risk<3){
+    document.getElementById("danger-glow").style.display="none";
+    document.getElementById("danger-bar").style.display="none";
+  }
+}
+
+function testAlarm(){ triggerAlarm("high",7.8); }
+
+// ── Risk chart ───────────────────────────────────────────────
+const chartHistory=new Array(60).fill(0);
+function initRiskChart(){ drawChart(); }
+function pushRiskChart(v){ chartHistory.push(v); if(chartHistory.length>60)chartHistory.shift(); drawChart(); }
+function drawChart(){
+  const cv=document.getElementById("risk-chart");
+  const ctx=cv.getContext("2d");
+  cv.width=cv.offsetWidth||240; cv.height=48;
+  const w=cv.width,h=cv.height;
+  ctx.clearRect(0,0,w,h);
+  // grid lines
+  ctx.strokeStyle="rgba(255,255,255,0.05)";ctx.lineWidth=1;
+  [0.3,0.6].forEach(p=>{ctx.beginPath();ctx.moveTo(0,h*p);ctx.lineTo(w,h*p);ctx.stroke();});
+  // gradient fill
+  const grad=ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,"rgba(255,59,59,0.4)");
+  grad.addColorStop(0.4,"rgba(245,166,35,0.3)");
+  grad.addColorStop(1,"rgba(0,230,118,0.1)");
+  ctx.beginPath();
+  chartHistory.forEach((v,i)=>{
+    const x=i*(w/60),y=h-(v/10)*h;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  // line
+  ctx.beginPath();ctx.strokeStyle="rgba(0,229,255,0.7)";ctx.lineWidth=1.5;
+  chartHistory.forEach((v,i)=>{
+    const x=i*(w/60),y=h-(v/10)*h;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+// ── Logs & alerts ────────────────────────────────────────────
+function addLog(msg,cls=""){
+  const key=msg+cls, now=Date.now();
+  if(addLog._t&&addLog._t[key]&&now-addLog._t[key]<2500)return;
+  if(!addLog._t)addLog._t={};addLog._t[key]=now;
+  const ts=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  logs.unshift({msg,cls,ts});if(logs.length>60)logs.pop();
+  renderLogs();
+}
+function renderLogs(){
+  document.getElementById("log-body").innerHTML=logs.slice(0,16).map(l=>
+    `<div class="log-entry ${l.cls}">[${l.ts}] ${l.msg}</div>`
+  ).join("");
+}
+function clearLogs(){ logs.length=0; renderLogs(); }
+
+const alertThrottles={};
+function addAlert(msg,type="warn"){
+  const now=Date.now();
+  if(alertThrottles[msg]&&now-alertThrottles[msg]<4000)return;
+  alertThrottles[msg]=now;
+  const ts=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  alerts.unshift({msg,type,ts}); if(alerts.length>20)alerts.pop();
+  renderAlerts();
+  addLog(msg,type==="danger"?"d":"w");
+}
+function renderAlerts(){
+  const el=document.getElementById("alert-list");
+  if(!alerts.length){el.innerHTML='<div style="padding:10px 12px;font-size:.72rem;color:var(--muted)">No alerts yet</div>';return;}
+  el.innerHTML=alerts.slice(0,8).map(a=>
+    `<div class="al-item">
+      <span class="al-badge al-${a.type==="danger"?"danger":"warn"}">${a.type==="danger"?"DANGER":"WARN"}</span>
+      <span class="al-text">${a.msg}</span>
+      <span class="al-time">${a.ts}</span>
+    </div>`
+  ).join("");
+}
+function clearAlerts(){ alerts.length=0; renderAlerts(); }
+
+// ── Radar login animation ─────────────────────────────────────
+(function radarAnim(){
+  const cv=document.getElementById("radar-canvas");
+  if(!cv)return;
+  const ctx=cv.getContext("2d");
+  let w,h;
+  function resize(){w=cv.width=window.innerWidth;h=cv.height=window.innerHeight;}
+  resize(); window.addEventListener("resize",resize);
+  const particles=Array.from({length:55},()=>({
+    x:Math.random()*2000,y:Math.random()*1200,
+    vx:(Math.random()-0.5)*0.4,vy:(Math.random()-0.5)*0.4,
+    r:Math.random()*1.5+0.3,
+  }));
+  let angle=0;
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    const cx=w*0.15,cy=h*0.5,R=Math.min(w,h)*0.32;
+    // radar circles
+    for(let i=1;i<=4;i++){
+      ctx.beginPath();ctx.arc(cx,cy,R*i/4,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(0,229,255,${0.06-i*0.01})`;ctx.lineWidth=1;ctx.stroke();
+    }
+    // sweep
+    const grad=ctx.createConicalGradient?null:null;
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+    const sg=ctx.createLinearGradient(0,0,R,0);
+    sg.addColorStop(0,"rgba(0,229,255,0.0)");sg.addColorStop(1,"rgba(0,229,255,0.18)");
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,-0.6,0);ctx.closePath();
+    ctx.fillStyle=sg;ctx.fill();
+    ctx.restore();
+    angle+=0.008;
+    // particles
+    particles.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;
+      const dx=p.x-cx,dy=p.y-cy,dd=Math.sqrt(dx*dx+dy*dy);
+      const alpha=dd<R?0.5*(1-dd/R)+0.05:0.04;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(0,229,255,${alpha})`;ctx.fill();
+    });
+    // connect nearby
+    for(let i=0;i<particles.length;i++)for(let j=i+1;j<particles.length;j++){
+      const p=particles[i],q=particles[j];
+      const d=Math.hypot(p.x-q.x,p.y-q.y);
+      if(d<90){
+        ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);
+        ctx.strokeStyle=`rgba(0,229,255,${(1-d/90)*0.08})`;ctx.lineWidth=0.5;ctx.stroke();
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Keyboard shortcuts ───────────────────────────────────────
+document.addEventListener("keydown",e=>{
+  if(document.getElementById("login-screen").style.display==="none"||document.getElementById("login-screen").style.display===""){
+    if(e.key==="Escape")dismissAlarm();
+    if(e.key==="s"&&e.ctrlKey){e.preventDefault();snoozeAlarm();}
+  }
+  if(e.key==="Enter"){
+    const lf=document.getElementById("form-login");
+    if(lf.classList.contains("visible"))doLogin();
+  }
+});
+
+// ── Run chart update even without face ───────────────────────
+setInterval(()=>{ if(!running)drawChart(); },500);
+</script>
+</body>
+</html>
